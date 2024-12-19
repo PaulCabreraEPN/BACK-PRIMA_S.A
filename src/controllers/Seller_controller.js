@@ -4,10 +4,6 @@ import {SendMailCredentials} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
 
-
-
-//*Login
-
 //* Registrar un Vendedor
 const registerSeller = async (req, res) => {
     try {

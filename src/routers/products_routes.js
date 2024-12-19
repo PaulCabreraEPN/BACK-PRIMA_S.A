@@ -1,10 +1,11 @@
 import {Router} from 'express'
 import { getAllProducts, getProductsById } from '../controllers/product_controller.js'
+import { verificarAutenticacion } from '../helpers/JWT.js'
 
 const router = Router()
 
-router.get('/products',getAllProducts)
-router.get('/products/:id',getProductsById)
+router.get('/products', verificarAutenticacion, getAllProducts)
+router.get('/products/:id', verificarAutenticacion, getProductsById)
 
 export default router
 

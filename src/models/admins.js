@@ -21,12 +21,20 @@ const AdminsSchema = new Schema({
         type:Boolean,
         default:true
     },
+    chances:{
+        type: Number,
+        require: true 
+    },
     lastLogin:{
         type: Date,
         require: true, 
         trim: true,
         default:Date.now() 
     }
-})
+},{
+    timestamps:true
+}
+
+)
 
 export default model('admins',AdminsSchema)
