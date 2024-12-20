@@ -1,4 +1,5 @@
 import { Schema,model } from "mongoose";
+import bcrypt from "bcryptjs";
 
 const AdminsSchema = new Schema({
     username:{
@@ -35,6 +36,18 @@ const AdminsSchema = new Schema({
     timestamps:true
 }
 
-)
+);
+
+//* Metodos
+AdminsSchema.methods.encryptPassword = async function (password){
+    const salt = await bcrypt.genSalt(10);
+    const passwordEncrypt = await bcrypt.hash(password,salt)
+    return passwordEncrypt;
+}
+
+
+AdminsSchema.methods.matchPassword = async function (password){
+    return await bcrypt.compare(password,this.password);
+}
 
 export default model('admins',AdminsSchema)

@@ -21,7 +21,8 @@ const login_admin = async (req,res) => {
     if(!verifyAdminBDD) {
         return res.status(400).json({msg: "Usuario Inexistente"});
     }else{
-        if(password !== verifyAdminBDD.password && verifyAdminBDD.status==true){
+        const verifyPassword = await verifyAdminBDD.matchPassword(password)
+        if(!verifyPassword && verifyAdminBDD.status==true){
             verifyAdminBDD.chances = verifyAdminBDD.chances-1
             if(verifyAdminBDD.chances<=0){
                 verifyAdminBDD.status = false;
