@@ -1,7 +1,7 @@
 import {Router} from 'express'
 import { confirmEmail, registerSeller, searchSellerById, searchSellerByNumberId, seeSellers,updateSellerController,UpdateAllSellerController,DeleteSellerController} from '../controllers/Seller_controller.js'
 import {login_admin} from '../controllers/admin_controller.js'
-import { verificarAutenticacion } from '../helpers/JWT.js'
+import { verificarAutenticacion } from '../middlewares/JWT.js'
 
 const router = Router()
 

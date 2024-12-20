@@ -1,4 +1,4 @@
-import generarJWT from '../helpers/JWT.js';
+import generarJWT from '../middlewares/JWT.js';
 import admins from '../models/admins.js';
 import mongoose from 'mongoose';
 
