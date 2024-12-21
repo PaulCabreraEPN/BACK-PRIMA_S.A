@@ -37,7 +37,7 @@ const createOrder= async(req,res)=>{
         //* Paso 3 - Interactuar con BDD
         const newOrder = new Orders(req.body);
 
-        newOrder.seller = "675caab826d2ad6a7886a4f9"
+        newOrder.seller = req.SellerBDD._id;
         await newOrder.save()
 
         const savedOrder = await newOrder.save();

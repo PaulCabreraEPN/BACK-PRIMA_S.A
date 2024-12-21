@@ -6,7 +6,7 @@ const ClientSchema = new Schema({
         required:true,
     },
     Ruc:{
-        type:String,
+        type:Number,
         required:true,
         trim:true,
         unique:true

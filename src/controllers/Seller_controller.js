@@ -3,6 +3,7 @@ import Sellers from '../models/sellers.js'
 import {SendMailCredentials} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
+import generarJWT from '../middlewares/JWT.js'
 
 //* Registrar un Vendedor
 const registerSeller = async (req, res) => {
@@ -81,6 +82,24 @@ const confirmEmail = async (req,res)=>{
     } catch (error) {
         console.log(error);
         res.status(500).json({msg: "Error al confirmar el registro",error: error.message})
+    }
+}
+
+const loginSeller = async (req,res)=>{
+    try {
+        //* Paso 1 -Tomar Datos del Request
+    const {username,password} = req.body
+    //* Paso 2 - Validar Datos
+    if(!(username) || !(password)){return res.status(400).json({msg:"Faltan datos por ingresar"})}
+    //* Paso 3 - Interactuar con BDD
+    const SellerBDD = await Sellers.findOne({username})
+    if(!SellerBDD){return res.status(400).json({msg:"Usuario no encontrado"})}
+    const verifyPassword = await SellerBDD.matchPassword(password)
+    if(!verifyPassword){return res.status(400).json({msg:"Contraseña incorrecta"})}
+    const tokenJWT = generarJWT(SellerBDD._id,"Seller")
+    res.status(200).json({msg:"Inicio de sesión exitoso",tokenJWT})
+    } catch (error) {
+        res.status(500).json({msg: "Error al iniciar sesión",error: error.message})
     }
 }
 
@@ -328,6 +347,7 @@ const DeleteSellerController = async (req, res) => {
 export {
     registerSeller,
     confirmEmail,
+    loginSeller,
     seeSellers,
     searchSellerById,
     searchSellerByNumberId,

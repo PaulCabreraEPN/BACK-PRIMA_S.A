@@ -5,6 +5,7 @@ import cors from 'cors';
 import adminRoutes from './routers/admin_routes.js'
 import productRoutes from './routers/products_routes.js'
 import clientsRoutes from './routers/clients_routes.js'
+import orderRoutes from './routers/order_routes.js'
 
 // Inicializaciones
 const app = express();
@@ -29,6 +30,8 @@ app.get('/',(req,res)=>{
 app.use('/api/',adminRoutes)
 app.use('/api/',productRoutes)
 app.use('/api/',clientsRoutes)
+app.use('/api/',orderRoutes)
+
 
 //Rutas no encontradas
 
