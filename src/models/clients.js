@@ -4,12 +4,12 @@ const ClientSchema = new Schema({
     Name:{
         type:String,
         required:true,
-        unique:true
     },
     Ruc:{
         type:String,
         required:true,
-        trim:true
+        trim:true,
+        unique:true
     },
     Address:{
         type:String,
@@ -23,6 +23,7 @@ const ClientSchema = new Schema({
     email:{
         type:String,
         required:true,
+        unique:true
     },
     credit:{
         type:String,
