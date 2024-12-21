@@ -4,6 +4,7 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import adminRoutes from './routers/admin_routes.js'
 import productRoutes from './routers/products_routes.js'
+import clientsRoutes from './routers/clients_routes.js'
 
 // Inicializaciones
 const app = express();
@@ -27,6 +28,7 @@ app.get('/',(req,res)=>{
 
 app.use('/api/',adminRoutes)
 app.use('/api/',productRoutes)
+app.use('/api/',clientsRoutes)
 
 //Rutas no encontradas
 
