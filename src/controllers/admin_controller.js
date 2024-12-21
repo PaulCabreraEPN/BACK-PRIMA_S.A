@@ -56,6 +56,13 @@ const login_admin = async (req,res) => {
 
 }
 
+// Recuperar contraseña
+
+const recovery_pass_admin = async (req, res) => {
+    return res.status(200).json({msg: `Nueva Contraseña generada`});
+}
+
 export {
-    login_admin
+    login_admin,
+    recovery_pass_admin
 }

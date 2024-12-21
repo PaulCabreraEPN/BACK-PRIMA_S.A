@@ -1,12 +1,14 @@
 import {Router} from 'express'
 import { confirmEmail, registerSeller, searchSellerById, searchSellerByNumberId, seeSellers,updateSellerController,UpdateAllSellerController,DeleteSellerController} from '../controllers/Seller_controller.js'
-import {login_admin} from '../controllers/admin_controller.js'
+import {login_admin, recovery_pass_admin} from '../controllers/admin_controller.js'
 import { verificarAutenticacion } from '../middlewares/JWT.js'
 
 const router = Router()
 
 //* Rutas de inicio de sesion
 router.post('/login-admin', login_admin)
+// Ruta para recuperar contraseña
+router.post('/recovery-password-admin', recovery_pass_admin)
 
 //* Rutas Géstión Vendedores
 // Ruta para registrar 
