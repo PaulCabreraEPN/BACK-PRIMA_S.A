@@ -1,4 +1,4 @@
-import passwordGenerator from '../helpers/passwordGenerator.js'
+import {passwordGenerator} from '../helpers/passwordGenerator.js'
 import Sellers from '../models/sellers.js'
 import {SendMailCredentials} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';

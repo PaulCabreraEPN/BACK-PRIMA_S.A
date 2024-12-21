@@ -10,4 +10,19 @@ const passwordGenerator = (length = 8) => {
     return password
 }
 
-export default passwordGenerator
+const passwordGeneratorbyAdmin = ()  => {
+    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+    let password = '';
+
+    for (let i = 0; i < 8; i++) {
+        const randomIndex = Math.floor(Math.random() * characters.length);
+        password += characters[randomIndex];
+    }
+
+    return password;
+} 
+
+export {
+    passwordGenerator,
+    passwordGeneratorbyAdmin
+} 

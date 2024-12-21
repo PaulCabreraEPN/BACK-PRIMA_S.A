@@ -1,5 +1,6 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
+import { passwordGeneratorbyAdmin } from '../helpers/passwordGenerator.js';
 
 dotenv.config()
 
@@ -65,17 +66,28 @@ const SendMailCredentials = (userMail,name, username, password,token) => {
     });
 }
 
-const sendMailToRecoveryPassword = async(username)=>{
+const sendMailToRecoveryPassword = async(username, password)=>{
     let info = await transporter.sendMail({
     from: process.env.USER_MAILTRAP,
     to: process.env.ADMIN_MAILTRAP,
     subject: "Correo para reestablecer tu contraseña",
     html: `
-    <h1>Sistema de gestión (VET-ESFOT 🐶 😺)</h1>
-    <hr>
-    <a href=${process.env.URL_BACKEND}recuperar-password/${token}>Clic para reestablecer tu contraseña</a>
-    <hr>
-    <footer>Grandote te da la Bienvenida!</footer>
+    <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
+        <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+            <div style="text-align: center; margin-bottom: 20px;">
+                <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
+                <h2 style="color: #004ba0;">Recuperación de Contraseña</h2>
+            </div>
+            <p style="color: #333;">Hola <strong>${username}</strong>,</p>
+            <p style="color: #333;">Hemos recibido una solicitud para restablecer tu contraseña. A continuación, encontrarás tu nueva contraseña:</p>
+            <div style="background: #f9f9f9; padding: 15px; border: 1px solid #eee; border-radius: 5px; text-align: center;">
+                <p style="color: #004ba0; font-size: 1.2em;"><strong>Contraseña:</strong> ${password}</p>
+            </div>
+            <p style="color: #333;">Si no solicitaste este cambio, notifícalo por este medio.</p>
+            <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
+            <p style="text-align: center; margin-top: 20px; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
+        </div>
+    </body>
     `
     });
     console.log("Mensaje enviado satisfactoriamente: ", info.messageId);
