@@ -1,3 +1,5 @@
+import { sendMailToRecoveryPassword } from '../config/nodemailer.js';
+import { passwordGeneratorbyAdmin } from '../helpers/passwordGenerator.js';
 import generarJWT from '../middlewares/JWT.js';
 import admins from '../models/admins.js';
 import mongoose from 'mongoose';
@@ -56,6 +58,29 @@ const login_admin = async (req,res) => {
 
 }
 
+// Recuperar contraseña
+
+const recovery_pass_admin = async (req, res) => {
+    //* Paso 1 -Tomar Datos del Request
+    const {username} = req.body;
+    const newpassword = passwordGeneratorbyAdmin();
+
+    //* Paso 2 - Validar Datos
+    //? Verifica si un campo esta vacio
+    if(Object.values(req.body).includes("")) {
+        return res.status(400).json({msg: "Lo sentimos, debes llenar todos los campos"});
+    }
+
+    //* Paso 3 - Interactuar con la base de datos
+    const verifyAdminBDD = await admins.findOne({username});
+    verifyAdminBDD.password = await verifyAdminBDD.encryptPassword(newpassword);
+    await verifyAdminBDD.save();
+    sendMailToRecoveryPassword(username, newpassword);
+
+    return res.status(200).json({msg: `Nueva Contraseña generada, REVISA EL CORREO DE LA EMPRESA`});
+}
+
 export {
-    login_admin
+    login_admin,
+    recovery_pass_admin
 }
