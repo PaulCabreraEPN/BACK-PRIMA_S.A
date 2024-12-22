@@ -14,9 +14,16 @@ const orderSchema = new Schema({
         required: true
     },
     products: [{
-        type: String,
-        ref: 'products',
-        required: true
+        productId:{
+            type: String,
+            ref: 'products',
+            required: true
+        },
+        quantity: {
+            type: Number,
+            required: true
+        },
+        _id: false,
     }],
     discountApplied: {
         type: Number,
@@ -50,5 +57,8 @@ const orderSchema = new Schema({
 },{
     timestamps: true
 });
+
+// Desactivar `_id` en los subdocumentos del array `products`
+orderSchema.path("products").schema.options._id = false;
 
 export default model('orders',orderSchema)
