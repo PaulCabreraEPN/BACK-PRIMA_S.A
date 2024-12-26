@@ -3,6 +3,7 @@ import Clients from '../models/clients.js'
 import Products from '../models/products.js'
 import Sellers from '../models/sellers.js'
 
+
 //* Crear Ordenes
 const createOrder = async(req,res) => {
     try {
@@ -96,10 +97,124 @@ const createOrder = async(req,res) => {
 }
 
 //* Actualizar una orden
-const updateOrder = async (req, res) =>{
+const updateOrder = async (req, res) => {
     try {
-        const {products, discountApplied, netTotal, totalWithTax } = req.body;
-        
+        //Toma de datos
+        const { id } = req.params;
+        const { products, discountApplied, netTotal, totalWithTax } = req.body;
+
+        //Validaciones
+        if (Object.values(req.body).includes("")) {
+            return res.status(400).json({ msg: "Lo sentimos, debes llenar todos los campos" });
+        }
+
+        if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
+            return res.status(400).json({ message: "Los valores numéricos deben ser positivos" });
+        }
+
+        const orderToUpdate = await Orders.findById(id);
+
+        if (!orderToUpdate) {
+            return res.status(404).json({ message: "Orden no encontrada" });
+        }
+
+        // Traer todos los productos de la base de datos de una sola vez
+        const productIds = products.map(product => parseInt(product.productId)); // Obtener todos los IDs de productos a actualizar
+        const productsInDB = await Products.find({ id: { $in: productIds } }); // Traemos todos los productos de una vez
+
+        // Crear un mapa de los productos de la base de datos para acceso rápido
+        const productsMap = productsInDB.reduce((acc, product) => {
+            acc[product.id] = product;
+            return acc;
+        }, {});
+
+        // Verificación inicial de stock y actualización (Regresar los productos al Stock)
+        for (const product of orderToUpdate.products) {
+            console.log(`Actualizando stock del producto ${product.id}`);
+            console.log(`Stock antes de actualizar: ${product.currentStock}`);
+            console.log(`Cantidad al reestablecer: ${product.quantity}`);
+
+            const productInDB = productsMap[product.id];
+
+            if (productInDB) {
+                const result = await Products.findOneAndUpdate(
+                    { id: product.id },
+                    { $inc: { stock: +product.quantity } },
+                    { new: true }
+                );
+
+                if (!result) {
+                    throw new Error(`Error al actualizar el stock del producto ${product.id}`);
+                }
+
+                console.log(`Stock después de actualizar: ${result.stock}`);
+            } else {
+                return res.status(404).json({ message: `Producto no encontrado: ${product.id}` });
+            }
+        }
+
+        // Verificación y actualización de stock para los nuevos productos
+        const productsToUpdate = [];
+
+        for (const product of products) {
+            const productInDB = productsMap[parseInt(product.productId)];
+
+            if (!productInDB) {
+                return res.status(404).json({
+                    message: `Producto no encontrado: ${product.productId}`
+                });
+            }
+
+            console.log(`Stock actual del producto ${product.productId}: ${productInDB.stock}`);
+            console.log(`Cantidad solicitada: ${product.quantity}`);
+
+            if (productInDB.stock < product.quantity) {
+                return res.status(400).json({
+                    message: `Stock insuficiente para el producto ${product.productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${product.quantity}`
+                });
+            }
+
+            productsToUpdate.push({
+                id: productInDB.id,
+                quantity: product.quantity,
+                currentStock: productInDB.stock
+            });
+        }
+
+        // Actualización de stock para los nuevos productos
+        for (const product of productsToUpdate) {
+            console.log(`Actualizando stock del producto ${product.id}`);
+            console.log(`Stock antes de actualizar: ${product.currentStock}`);
+            console.log(`Cantidad a restar: ${product.quantity}`);
+
+            const result = await Products.findOneAndUpdate(
+                { id: product.id },
+                { $inc: { stock: -product.quantity } },
+                { new: true }
+            );
+
+            if (!result) {
+                throw new Error(`Error al actualizar el stock del producto ${product.id}`);
+            }
+
+            console.log(`Stock después de actualizar: ${result.stock}`);
+        }
+
+        // Actualizar la orden
+        const filteredUpdates = {
+            products: productsToUpdate,
+            discountApplied: discountApplied,
+            netTotal: netTotal,
+            totalWithTax: totalWithTax
+        };
+
+        const updatedOrder = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true });
+
+        res.status(200).json({
+            msg: "Orden actualizada con éxito",
+            updatedOrder
+        });
+
     } catch (error) {
         console.error('Error en updateOrder: ', error);
         res.status(500).json({
@@ -107,7 +222,8 @@ const updateOrder = async (req, res) =>{
             error: error.message
         });
     }
-}
+};
+
 
 
 
@@ -136,7 +252,7 @@ const updateStateOrder = async (req, res) => {
         const fechaActual = new Date();
 
         // Actualizar el estado y la fecha de última modificación
-        const updatedOrder = await orders.findByIdAndUpdate(
+        const updatedOrder = await Orders.findByIdAndUpdate(
             id,
             { status, lastUpdate: new Date(fechaActual.getTime() - fechaActual.getTimezoneOffset() * 60000)},
             { new: true }
