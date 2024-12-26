@@ -95,6 +95,21 @@ const createOrder = async(req,res) => {
     }
 }
 
+//* Actualizar una orden
+const updateOrder = async (req, res) =>{
+    try {
+        const {products, discountApplied, netTotal, totalWithTax } = req.body;
+        
+    } catch (error) {
+        console.error('Error en updateOrder: ', error);
+        res.status(500).json({
+            message: "Error al actualizar orden",
+            error: error.message
+        });
+    }
+}
+
+
 
 //* Actualizar el estado de una Orden
 const updateStateOrder = async (req, res) => {
