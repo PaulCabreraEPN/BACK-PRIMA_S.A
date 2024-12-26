@@ -3,7 +3,7 @@ import Clients from '../models/clients.js'
 import Products from '../models/products.js'
 import Sellers from '../models/sellers.js'
 
-
+//* Crear Ordenes
 const createOrder = async(req,res) => {
     try {
         const { customer, products, discountApplied, netTotal, totalWithTax } = req.body;
@@ -96,6 +96,59 @@ const createOrder = async(req,res) => {
 }
 
 
+//* Actualizar el estado de una Orden
+const updateStateOrder = async (req, res) => {
+    //* Paso 1 - Tomar Datos del Request
+    const { id } = req.params; // ID de la orden a actualizar
+    const { status } = req.body; // Estado a actualizar
+
+    //* Paso 2 - Validar Datos
+    // Validar si el id es un ObjectId válido
+    if (!mongoose.Types.ObjectId.isValid(id)) {
+        return res.status(404).json({ 
+            msg: `No existe la proforma con el id ${id}. Ingrese un ID válido para actualizar.` 
+        });
+    }
+
+    if (!status) {
+        return res.status(400).json({ 
+            msg: "El campo 'status' es requerido para actualizar el estado." 
+        });
+    }
+
+    try {
+        //Agregar fecha de actualización
+        const fechaActual = new Date();
+
+        // Actualizar el estado y la fecha de última modificación
+        const updatedOrder = await orders.findByIdAndUpdate(
+            id,
+            { status, lastUpdate: new Date(fechaActual.getTime() - fechaActual.getTimezoneOffset() * 60000)},
+            { new: true }
+        );
+
+        if (!updatedOrder) {
+            return res.status(404).json({ 
+                msg: `No se encontró la proforma con el id ${id}.` 
+            });
+        }
+
+        // Responder con el registro actualizado
+        return res.status(200).json({
+            msg: "Estado de la proforma actualizado correctamente.",
+            data: updatedOrder,
+        });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ 
+            msg: "Error interno del servidor.", 
+            error: error.message 
+        });
+    }
+};
+
+
 export{
     createOrder,
+    updateStateOrder
 }
