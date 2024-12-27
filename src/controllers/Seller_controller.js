@@ -1,6 +1,6 @@
 import {passwordGenerator} from '../helpers/passwordGenerator.js'
 import Sellers from '../models/sellers.js'
-import {SendMailCredentials} from '../config/nodemailer.js';
+import {SendMailCredentials,sendMailToVerifyEmail} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
 import generarJWT from '../middlewares/JWT.js'
@@ -102,6 +102,53 @@ const loginSeller = async (req,res)=>{
         res.status(500).json({msg: "Error al iniciar sesión",error: error.message})
     }
 }
+
+const passwordRecovery = async (req,res)=>{
+    try {
+        //* Paso 1 -Tomar Datos del Request
+        const {email} = req.body
+        //* Paso 2 - Validar Datos
+        if(!(email)){return res.status(400).json({msg:"Faltan datos por ingresar"})}
+        const SellerBDD = await Sellers.findOne({email})
+        if(!SellerBDD){return res.status(400).json({msg:"Usuario no encontrado"})}
+        //* Paso 3 - Interactuar con BDD
+        const token = await SellerBDD.createToken()
+        SellerBDD.token = token
+        await sendMailToVerifyEmail(email,token)
+        await SellerBDD.save()
+        res.status(200).json({msg:"Se ha enviado un correo para recuperar la contraseña"})
+    } catch (error) {
+        res.status(500).json({msg: "Error al recuperar la contraseña",error: error.message})
+    }
+}
+
+const tokenComprobation = async(req,res) => {
+    //* Paso 1 - Tomar Datos del Request
+    const {token}=req.params
+    //* Paso 2 - Validar Datos
+    if(!token){return res.status(400).json({msg:"Lo sentimos, no se puede validar la cuenta"})}
+    const SellerBDD = await Sellers.findOne({token})
+    if(SellerBDD?.token !== token) {return res.status(404).json({msg:"Lo sentimos, no se puede validar la cuenta"})}
+    //* Paso 3 - Interactuar con BDD
+    await SellerBDD.save()
+    res.status(200).json({msg:"Token confirmado, ya puedes crear una nueva contraseña"})
+}
+
+const newPassword = async(req,res) => {
+    //* Paso 1 - Tomar Datos del Request
+    const {password, confirmpassword} = req.body;
+    //* Paso 2 - Validar Datos
+    if(Object.values(req.body).includes("")) {return res.status(400).json({msg:"Lo sentimos debes llenar todos los campos"})}
+    if(password != confirmpassword) {return res.status(400).json({msg:"Las contraseñas no coinciden"})}
+    const SellerBDD = await Sellers.findOne({token:req.params.token})
+    if(SellerBDD?.token !== req.params.token) {return res.status(404).json({msg:"Lo sentimos, no se puede validar la cuenta"})}
+    //* Paso 3 - Interactuar con BDD
+    SellerBDD.token = null
+    SellerBDD.password = await SellerBDD.encryptPassword(password)
+    await SellerBDD.save()
+    res.status(200).json({msg:"Cambio de contraseña correctamente"})
+}
+
 
 const seeSellers = async(req,res) => {
     try {
@@ -348,6 +395,9 @@ export {
     registerSeller,
     confirmEmail,
     loginSeller,
+    passwordRecovery,
+    tokenComprobation,
+    newPassword,
     seeSellers,
     searchSellerById,
     searchSellerByNumberId,

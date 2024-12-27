@@ -1,5 +1,5 @@
 import {Router} from 'express'
-import { confirmEmail, registerSeller, searchSellerById, searchSellerByNumberId, seeSellers,updateSellerController,UpdateAllSellerController,DeleteSellerController, loginSeller} from '../controllers/Seller_controller.js'
+import { confirmEmail, registerSeller, searchSellerById, searchSellerByNumberId, seeSellers,updateSellerController,UpdateAllSellerController,DeleteSellerController, loginSeller,passwordRecovery,tokenComprobation,newPassword} from '../controllers/Seller_controller.js'
 import {login_admin, recovery_pass_admin} from '../controllers/admin_controller.js'
 import { verificarAutenticacion } from '../middlewares/JWT.js'
 
@@ -15,6 +15,9 @@ router.post('/recovery-password-admin', recovery_pass_admin)
 router.post('/register',registerSeller)
 router.get('/confirm-account/:token',confirmEmail)
 router.post('/login',loginSeller)
+router.post('/recovery-password',passwordRecovery)
+router.get('/recovery-password/:token',tokenComprobation)
+router.post('/recovery-password/:token',newPassword)
 // Ruta para ver
 router.get('/sellers', verificarAutenticacion, seeSellers)
 // Rutas para Buscar

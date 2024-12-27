@@ -15,7 +15,7 @@ let transporter = nodemailer.createTransport({
     }
 });
 
-const SendMailCredentials = (userMail,name, username, password,token) => {
+const SendMailCredentials = (userMail, name, username, password, token) => {
     let mailOptions = {
         from: process.env.USER_MAILTRAP,
         to: userMail,
@@ -26,7 +26,8 @@ const SendMailCredentials = (userMail,name, username, password,token) => {
             <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
                 <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
                     <div style="text-align: center; margin-bottom: 20px;">
-                        <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">            <h2 style="color: #004ba0;">¡Bienvenido/a a PRIMA S.A.!</h2>
+                        <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
+                        <h2 style="color: #004ba0;">¡Bienvenido/a a PRIMA S.A.!</h2>
                     </div>
                     <p style="color: #333;">Hola <strong>${name}</strong>,</p>
                     <p style="color: #333;">Nos complace informarte que tu cuenta ha sido creada exitosamente. A continuación, te compartimos tus credenciales de acceso:</p>
@@ -34,16 +35,17 @@ const SendMailCredentials = (userMail,name, username, password,token) => {
                         <p style="color: #004ba0;"><strong>Usuario:</strong> ${username}</p>
                         <p style="color: #004ba0;"><strong>Contraseña:</strong> ${password}</p>
                     </div>
-                    <p style="color: #333;">Para acceder a tu cuenta, visita nuestro sistema en el siguiente enlace:</p>
-                    <p style="text-align: center;">
-                        <a href="${process.env.URL_BACK}/login" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Iniciar sesión</a>
-                    </p>
-                    <h3 style="color: #004ba0;">Confirma tu correo electrónico:</h3>
+                    <h3 style="color: #004ba0;">1. Confirma tu correo electrónico:</h3>
                     <p style="color: #333;">Antes de iniciar sesión, necesitas confirmar tu cuenta. Haz clic en el siguiente enlace:</p>
                     <p style="text-align: center;">
                         <a href="${process.env.URL_BACK}/confirm-account/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Confirmar mi cuenta</a>
                     </p>
-                    <h3 style="color: #004ba0;">Recomendaciones de seguridad:</h3>
+                    <h3 style="color: #004ba0;">2. Descarga la app:</h3>
+                    <p style="color: #333;">Para acceder a tu cuenta, descarga nuestra app desde el siguiente enlace:</p>
+                    <p style="text-align: center;">
+                        <a href="${process.env.URL_APP_DOWNLOAD}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Descargar App</a>
+                    </p>
+                    <h3 style="color: #004ba0;">3. Recomendaciones de seguridad:</h3>
                     <ul style="color: #333;">
                         <li>Cambia tu contraseña en el primer inicio de sesión.</li>
                         <li>No compartas esta información con nadie.</li>
@@ -93,8 +95,43 @@ const sendMailToRecoveryPassword = async(username, password)=>{
     console.log("Mensaje enviado satisfactoriamente: ", info.messageId);
 }
 
+const sendMailToVerifyEmail = async(email, token) => {
+    let info = await transporter.sendMail({
+        from: process.env.USER_MAILTRAP,
+        to: email,
+        subject: "Verifica tu cuenta en PRIMA S.A.",
+        html: `
+        <html>
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
+                <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
+                        <h2 style="color: #004ba0;">Verificación de Correo Electrónico</h2>
+                    </div>
+                    <p style="color: #333;">Hola,</p>
+                    <p style="color: #333;">Gracias por registrarte en PRIMA S.A. Para completar tu registro, necesitamos verificar tu dirección de correo electrónico.</p>
+                    <p style="color: #333;">Por favor, haz clic en el siguiente botón para verificar tu cuenta:</p>
+                    <p style="text-align: center;">
+                        <a href="${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Verificar mi cuenta</a>
+                    </p>
+                    <p style="color: #333;">Si no creaste una cuenta en PRIMA S.A., puedes ignorar este mensaje.</p>
+                    <p style="color: #333;">Si tienes problemas con el botón, copia y pega el siguiente enlace en tu navegador:</p>
+                    <p style="word-break: break-all; color: #004ba0;">
+                        ${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}
+                    </p>
+                    <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
+                    <p style="text-align: center; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
+                </div>
+            </body>
+        </html>
+        `
+    });
+    console.log("Mensaje de verificación enviado satisfactoriamente: ", info.messageId);
+}
+
 
 export {
     SendMailCredentials,
-    sendMailToRecoveryPassword
+    sendMailToRecoveryPassword,
+    sendMailToVerifyEmail
 }
