@@ -112,7 +112,7 @@ const listOrders = async (req,res) => {
     const orders = await Orders.find({estado:true}).populate("products","productId quantity").select("-salida -createAt -updateAt -__v")
     
     res.status(200).json(orders)
-  }
+}
 
 //* Actualizar una orden
 const updateOrder = async (req, res) => {
