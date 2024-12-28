@@ -96,6 +96,16 @@ const createOrder = async(req,res) => {
     }
 }
 
+//* Ver todas las ordenes
+const getAllOrders = async (req, res) => {
+    try {
+        const ordersBDD = await Orders.find().select("-_id")
+        res.status(200).json(ordersBDD);
+    } catch (error) {
+        res.status(500).json({ message: "Error al obtener los productos", error: error.message })
+    }
+}
+
 //* Actualizar una orden
 const updateOrder = async (req, res) => {
     try {
@@ -281,5 +291,6 @@ const updateStateOrder = async (req, res) => {
 
 export{
     createOrder,
+    getAllOrders,
     updateStateOrder
 }
