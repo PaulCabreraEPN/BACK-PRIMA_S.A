@@ -299,6 +299,7 @@ const updateStateOrder = async (req, res) => {
 
 export{
     createOrder,
+    updateOrder,
     getAllOrders,
     listOrders,
     updateStateOrder
