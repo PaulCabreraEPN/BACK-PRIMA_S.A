@@ -96,7 +96,7 @@ const loginSeller = async (req,res)=>{
         if(!SellerBDD){return res.status(400).json({msg:"Usuario no encontrado"})}
         const verifyPassword = await SellerBDD.matchPassword(password)
         if(!verifyPassword){return res.status(400).json({msg:"Contraseña incorrecta"})}
-        const tokenJWT = await generarJWT(SellerBDD._id,"Seller")
+        const tokenJWT = generarJWT(SellerBDD._id,"Seller")
         res.status(200).json({msg:"Inicio de sesión exitoso",tokenJWT})
     } catch (error) {
         res.status(500).json({msg: "Error al iniciar sesión",error: error.message})
