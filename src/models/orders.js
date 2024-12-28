@@ -1,4 +1,4 @@
-import { Schema,model } from "mongoose";
+import mongoose, {Schema,model} from 'mongoose'
 
 
 
@@ -53,12 +53,15 @@ const orderSchema = new Schema({
     comment: {
         type: String,
         default: ''
+    },
+    products:{
+        type:mongoose.Schema.Types.ObjectId,
+        ref:"products"
     }
 },{
     timestamps: true
 });
 
-// Desactivar `_id` en los subdocumentos del array `products`
-orderSchema.path("products").schema.options._id = false;
+
 
 export default model('orders',orderSchema)

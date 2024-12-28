@@ -106,6 +106,14 @@ const getAllOrders = async (req, res) => {
     }
 }
 
+const listOrders = async (req,res) => {
+    //Solo necesitamos interactuar con la BDD
+    //const pacientes = await Paciente.find({estado:true}).where("veterinario").equals(req.veterinarioBDD).select("-salida -createAt -updateAt -__v")
+    const orders = await Orders.find({estado:true}).populate("products","productId quantity").select("-salida -createAt -updateAt -__v")
+    
+    res.status(200).json(orders)
+  }
+
 //* Actualizar una orden
 const updateOrder = async (req, res) => {
     try {
@@ -292,5 +300,6 @@ const updateStateOrder = async (req, res) => {
 export{
     createOrder,
     getAllOrders,
+    listOrders,
     updateStateOrder
 }
