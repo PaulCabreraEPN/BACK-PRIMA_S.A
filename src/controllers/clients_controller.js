@@ -12,25 +12,18 @@ const getAllClients = async (req, res) => {
 
 const getClientsById = async (req, res) => {
     //* Paso 1 - Tomar Datos del Request
-    const { id } = req.params;
+    const { ruc } = req.params;
 
     //* Paso 2 - Validar Datos
-    if (!id) {
+    if (!ruc) {
         return res.status(400).json({
-            msg: "Por favor, ingrese un ID válido",
-        });
-    }
-
-    // Validar si el ID es un ObjectId válido
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({
-            msg: `Lo sentimos, no existe un cliente con el ID ${id}`,
+            msg: "Por favor, ingrese un RUC válido",
         });
     }
 
     //* Paso 3 - Interactuar con BDD
     try {
-        const client = await Clients.findById(id); // Usamos findById para buscar por _id
+        const client = await Clients.findOne({ Ruc: ruc }); // Usamos findOne para buscar por RUC
         if (!client) {
             return res.status(404).json({
                 msg: "Cliente no encontrado",
@@ -57,8 +50,6 @@ const getClientsById = async (req, res) => {
         });
     }
 };
-
-
 
 export {
     getAllClients,

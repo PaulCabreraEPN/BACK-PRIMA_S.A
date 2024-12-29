@@ -4,6 +4,6 @@ import { getAllClients, getClientsById } from '../controllers/clients_controller
 const router = Router()
 
 router.get('/clients',getAllClients )
-router.get('/clients/:id',getClientsById)
+router.get('/clients/:ruc',getClientsById)
 
 export default router
