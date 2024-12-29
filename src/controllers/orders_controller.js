@@ -136,6 +136,13 @@ const updateOrder = async (req, res) => {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
+        if (orderToUpdate.status!=="Pending"){
+            return res.status(400).json({ message: "El pedido ya no se puede actualizar" });
+        }
+
+        console.log(orderToUpdate.status);
+        
+
         // Traer todos los productos de la base de datos de una sola vez
         const productIds = products.map(product => parseInt(product.productId)); // Obtener todos los IDs de productos a actualizar
         const productsInDB = await Products.find({ id: { $in: productIds } }); // Traemos todos los productos de una vez
@@ -147,27 +154,31 @@ const updateOrder = async (req, res) => {
         }, {});
 
         // Verificación inicial de stock y actualización (Regresar los productos al Stock)
+        console.log(orderToUpdate.products);
+        
         for (const product of orderToUpdate.products) {
-            console.log(`Actualizando stock del producto ${product.id}`);
+            const productId = parseInt(product.productId);
+
+            console.log(`Actualizando stock del producto ${productId}`);
             console.log(`Stock antes de actualizar: ${product.currentStock}`);
             console.log(`Cantidad al reestablecer: ${product.quantity}`);
 
-            const productInDB = productsMap[product.id];
+            const productInDB = productsMap[productId];
 
             if (productInDB) {
                 const result = await Products.findOneAndUpdate(
-                    { id: product.id },
+                    { id: productId },
                     { $inc: { stock: +product.quantity } },
                     { new: true }
                 );
 
                 if (!result) {
-                    throw new Error(`Error al actualizar el stock del producto ${product.id}`);
+                    throw new Error(`Error al actualizar el stock del producto ${productId}`);
                 }
 
                 console.log(`Stock después de actualizar: ${result.stock}`);
             } else {
-                return res.status(404).json({ message: `Producto no encontrado: ${product.id}` });
+                return res.status(404).json({ message: `Producto no encontrado: ${productId}` });
             }
         }
 
@@ -193,7 +204,7 @@ const updateOrder = async (req, res) => {
             }
 
             productsToUpdate.push({
-                id: productInDB.id,
+                productId: product.productId,
                 quantity: product.quantity,
                 currentStock: productInDB.stock
             });
@@ -201,23 +212,27 @@ const updateOrder = async (req, res) => {
 
         // Actualización de stock para los nuevos productos
         for (const product of productsToUpdate) {
-            console.log(`Actualizando stock del producto ${product.id}`);
+
+            const productId = parseInt(product.productId);
+
+            console.log(`Actualizando stock del producto ${productId}`);
             console.log(`Stock antes de actualizar: ${product.currentStock}`);
             console.log(`Cantidad a restar: ${product.quantity}`);
 
             const result = await Products.findOneAndUpdate(
-                { id: product.id },
+                { id: productId },
                 { $inc: { stock: -product.quantity } },
                 { new: true }
             );
 
             if (!result) {
-                throw new Error(`Error al actualizar el stock del producto ${product.id}`);
+                throw new Error(`Error al actualizar el stock del producto ${productId}`);
             }
 
             console.log(`Stock después de actualizar: ${result.stock}`);
         }
 
+        
         // Actualizar la orden
         const filteredUpdates = {
             products: productsToUpdate,
