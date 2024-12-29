@@ -1,7 +1,7 @@
 import Orders from '../models/orders.js'
 import Clients from '../models/clients.js'
 import Products from '../models/products.js'
-import Sellers from '../models/sellers.js'
+import mongoose from 'mongoose'
 
 
 //* Crear Ordenes
