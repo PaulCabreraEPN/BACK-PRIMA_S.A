@@ -311,11 +311,76 @@ const updateStateOrder = async (req, res) => {
     }
 };
 
+//Eliminar una orden 
+const deleteOrder = async (req, res) => {
+    try {
+        // Toma de datos desde la solicitud
+        const { id } = req.params;
+
+        // Verificar si la orden existe
+        const orderToDelete = await Orders.findById(id);
+
+        if (!orderToDelete) {
+            return res.status(404).json({ message: "Orden no encontrada" });
+        }
+
+        // Reestablecer el stock de los productos relacionados
+        const productIds = orderToDelete.products.map(product => parseInt(product.productId));
+        const productsInDB = await Products.find({ id: { $in: productIds } });
+
+        // Crear un mapa para acceso rápido a los productos en la base de datos
+        const productsMap = productsInDB.reduce((acc, product) => {
+            acc[product.id] = product;
+            return acc;
+        }, {});
+
+        for (const product of orderToDelete.products) {
+            const productId = parseInt(product.productId);
+
+            const productInDB = productsMap[productId];
+
+            if (productInDB) {
+                const result = await Products.findOneAndUpdate(
+                    { id: productId },
+                    { $inc: { stock: +product.quantity } },
+                    { new: true }
+                );
+
+                if (!result) {
+                    throw new Error(`Error al reestablecer el stock del producto ${productId}`);
+                }
+
+                console.log(`Producto ${productId} - Stock actualizado a ${result.stock}`);
+            } else {
+                return res.status(404).json({ message: `Producto no encontrado: ${productId}` });
+            }
+        }
+
+        // Eliminar la orden de la base de datos
+        await Orders.findByIdAndDelete(id);
+
+        res.status(200).json({
+            msg: "Orden eliminada con éxito y stock reestablecido"
+        });
+    } catch (error) {
+        console.error('Error en deleteOrder:', error);
+        res.status(500).json({
+            message: "Error al eliminar orden",
+            error: error.message
+        });
+    }
+};
+
+
+
+
+
 
 export{
     createOrder,
     updateOrder,
     getAllOrders,
     listOrders,
-    updateStateOrder
+    updateStateOrder,
+    deleteOrder
 }

@@ -1,5 +1,5 @@
 import {Router} from 'express'
-import { createOrder, updateStateOrder,getAllOrders,listOrders, updateOrder } from '../controllers/orders_controller.js'
+import { createOrder, updateStateOrder,getAllOrders,listOrders, updateOrder,deleteOrder } from '../controllers/orders_controller.js'
 import { verificarAutenticacion } from '../middlewares/JWT.js'
 
 const router = Router()
@@ -9,5 +9,6 @@ router.patch('/orders/update/state/:id', verificarAutenticacion, updateStateOrde
 router.put('/orders/update/:id', verificarAutenticacion, updateOrder)
 router.get("/orders",verificarAutenticacion,getAllOrders)
 router.get("/seeOrdersProducts",verificarAutenticacion,listOrders)
+router.delete("/deleteOrder/:id",deleteOrder)
 
 export default router
