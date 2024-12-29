@@ -7,7 +7,7 @@ const router = Router()
 router.post('/orders/create', verificarAutenticacion, createOrder)
 router.patch('/orders/update/state/:id', verificarAutenticacion, updateStateOrder)
 router.put('/orders/update/:id', verificarAutenticacion, updateOrder)
-router.get("/seeOrders",verificarAutenticacion,getAllOrders)
+router.get("/orders",verificarAutenticacion,getAllOrders)
 router.get("/seeOrdersProducts",verificarAutenticacion,listOrders)
 
 export default router
