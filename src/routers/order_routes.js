@@ -9,6 +9,6 @@ router.patch('/orders/update/state/:id', verificarAutenticacion, updateStateOrde
 router.put('/orders/update/:id', verificarAutenticacion, updateOrder)
 router.get("/orders",verificarAutenticacion,getAllOrders)
 router.get("/seeOrdersProducts",verificarAutenticacion,listOrders)
-router.delete("/deleteOrder/:id",deleteOrder)
+router.delete("/deleteOrder/:id",verificarAutenticacion,deleteOrder)
 
 export default router
