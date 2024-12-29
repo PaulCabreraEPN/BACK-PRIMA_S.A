@@ -53,10 +53,6 @@ const orderSchema = new Schema({
     comment: {
         type: String,
         default: ''
-    },
-    products:{
-        type:mongoose.Schema.Types.ObjectId,
-        ref:"products"
     }
 },{
     timestamps: true
