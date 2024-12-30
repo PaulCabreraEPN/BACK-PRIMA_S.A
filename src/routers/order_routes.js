@@ -8,7 +8,7 @@ router.post('/orders/create', verificarAutenticacion, createOrder)
 router.patch('/orders/update/state/:id', verificarAutenticacion, updateStateOrder)
 router.put('/orders/update/:id', verificarAutenticacion, updateOrder)
 router.get("/SeeAllOrders",verificarAutenticacion,SeeAllOrders)
-router.get("/SeeOrderById/:id",SeeOrderById)
+router.get("/SeeOrderById/:id",verificarAutenticacion,SeeOrderById)
 router.delete("/deleteOrder/:id",verificarAutenticacion,deleteOrder)
 
 
