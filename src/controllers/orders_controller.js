@@ -1,5 +1,6 @@
 import Orders from '../models/orders.js'
 import Clients from '../models/clients.js'
+import Sellers from '../models/sellers.js'
 import Products from '../models/products.js'
 import mongoose from 'mongoose'
 
@@ -96,23 +97,7 @@ const createOrder = async(req,res) => {
     }
 }
 
-//* Ver todas las ordenes
-const getAllOrders = async (req, res) => {
-    try {
-        const ordersBDD = await Orders.find().select("-_id")
-        res.status(200).json(ordersBDD);
-    } catch (error) {
-        res.status(500).json({ message: "Error al obtener los productos", error: error.message })
-    }
-}
 
-const listOrders = async (req,res) => {
-    //Solo necesitamos interactuar con la BDD
-    //const pacientes = await Paciente.find({estado:true}).where("veterinario").equals(req.veterinarioBDD).select("-salida -createAt -updateAt -__v")
-    const orders = await Orders.find({estado:true}).populate("products","productId quantity").select("-salida -createAt -updateAt -__v")
-    
-    res.status(200).json(orders)
-}
 
 //* Actualizar una orden
 const updateOrder = async (req, res) => {
@@ -374,13 +359,107 @@ const deleteOrder = async (req, res) => {
 
 
 
+const SeeAllOrders = async (req, res) => {
+    try {
+        // Obtener todas las órdenes
+        const orders = await Orders.find();
+
+        if (!orders || orders.length === 0) {
+            return res.status(404).json({ message: "No se encontraron órdenes" });
+        }
+
+        // Obtener todos los RUCs de clientes y IDs de vendedores
+        const customerRUCs = [...new Set(orders.map(order => order.customer))];
+        const sellerIds = [...new Set(orders.map(order => order.seller))];
+
+        // Consultar detalles de clientes y vendedores
+        const clients = await Clients.find({ Ruc: { $in: customerRUCs } });
+        const sellers = await Sellers.find({ _id: { $in: sellerIds } });
+
+        // Crear mapas para acceso rápido con los campos especificados
+        const clientMap = clients.reduce((map, client) => {
+            map[client.Ruc] = {
+                _id: client._id,
+                Name: client.Name,
+                Ruc: client.Ruc,
+                Address: client.Address,
+                telephone: client.telephone,
+                email: client.email,
+                credit: client.credit,
+                state: client.state
+            };
+            return map;
+        }, {});
+
+        const sellerMap = sellers.reduce((map, seller) => {
+            map[seller._id.toString()] = {
+                _id: seller._id,
+                names: seller.names,
+                lastNames: seller.lastNames,
+                numberID: seller.numberID,
+                email: seller.email,
+                SalesCity: seller.SalesCity,
+                PhoneNumber: seller.PhoneNumber,
+                role: seller.role,
+                username: seller.username
+            };
+            return map;
+        }, {});
+
+        // Obtener todos los productId de las órdenes
+        const productIds = orders.flatMap(order =>
+            order.products.map(product => parseInt(product.productId))
+        );
+
+        // Consultar los detalles de los productos en la base de datos
+        const products = await Products.find({ id: { $in: productIds } });
+
+        // Crear un mapa de productos para acceso rápido
+        const productMap = products.reduce((map, product) => {
+            map[product.id] = {
+                _id: product._id,
+                product_name: product.product_name,
+                measure: product.measure,
+                price: product.price
+            };
+            return map;
+        }, {});
+
+        // Formatear las órdenes con la información requerida
+        const formattedOrders = orders.map(order => ({
+            _id: order._id,
+            customer: clientMap[order.customer] || null,
+            products: order.products.map(p => ({
+                productId: p.productId,
+                quantity: p.quantity,
+                productDetails: productMap[parseInt(p.productId)] || null
+            })),
+            discountApplied: order.discountApplied,
+            netTotal: order.netTotal,
+            totalWithTax: order.totalWithTax,
+            status: order.status,
+            comment: order.comment,
+            seller: sellerMap[order.seller.toString()] || null
+        }));
+
+        res.status(200).json(formattedOrders);
+    } catch (error) {
+        console.error("Error en getOrdersWithDetails: ", error);
+        res.status(500).json({
+            message: "Error al obtener las órdenes con detalles",
+            error: error.message
+        });
+    }
+};
+
+
 
 
 export{
     createOrder,
     updateOrder,
-    getAllOrders,
-    listOrders,
+    SeeAllOrders,
     updateStateOrder,
-    deleteOrder
+    deleteOrder,
+    
 }
