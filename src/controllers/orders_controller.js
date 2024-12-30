@@ -454,12 +454,115 @@ const SeeAllOrders = async (req, res) => {
 
 
 
+const SeeOrderById = async (req, res) => {
+    try {
+        // Obtener el ID de la orden desde los parámetros de la solicitud
+        const { id } = req.params;
+
+        // Validar que el ID sea un ObjectId válido de MongoDB
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(404).json({
+                msg: `No existe la orden con el id ${id}. Ingrese un ID válido.`
+            });
+        }
+
+        // Buscar la orden por su ID
+        const order = await Orders.findById(id);
+
+        // Si no se encuentra la orden, retornar error 404
+        if (!order) {
+            return res.status(404).json({ message: "Orden no encontrada" });
+        }
+
+        // Obtener el RUC del cliente y el ID del vendedor de la orden
+        const customerRuc = order.customer;
+        const sellerId = order.seller;
+
+        // Consultar detalles del cliente y vendedor
+        const client = await Clients.findOne({ Ruc: customerRuc });
+        const seller = await Sellers.findById(sellerId);
+
+        // Obtener los IDs de los productos en la orden
+        const productIds = order.products.map(product => parseInt(product.productId));
+
+        // Consultar los detalles de los productos en la base de datos
+        const products = await Products.find({ id: { $in: productIds } });
+
+        // Crear mapas para cliente, vendedor y productos
+        const clientDetails = client
+            ? {
+                _id: client._id,
+                Name: client.Name,
+                Ruc: client.Ruc,
+                Address: client.Address,
+                telephone: client.telephone,
+                email: client.email,
+                credit: client.credit,
+                state: client.state
+            }
+            : null;
+
+        const sellerDetails = seller
+            ? {
+                _id: seller._id,
+                names: seller.names,
+                lastNames: seller.lastNames,
+                numberID: seller.numberID,
+                email: seller.email,
+                SalesCity: seller.SalesCity,
+                PhoneNumber: seller.PhoneNumber,
+                role: seller.role,
+                username: seller.username
+            }
+            : null;
+
+        const productMap = products.reduce((map, product) => {
+            map[product.id] = {
+                _id: product._id,
+                product_name: product.product_name,
+                measure: product.measure,
+                price: product.price
+            };
+            return map;
+        }, {});
+
+        // Formatear la orden con la información requerida
+        const formattedOrder = {
+            _id: order._id,
+            customer: clientDetails,
+            products: order.products.map(p => ({
+                productId: p.productId,
+                quantity: p.quantity,
+                productDetails: productMap[parseInt(p.productId)] || null
+            })),
+            discountApplied: order.discountApplied,
+            netTotal: order.netTotal,
+            totalWithTax: order.totalWithTax,
+            status: order.status,
+            comment: order.comment,
+            seller: sellerDetails
+        };
+
+        // Enviar la respuesta con la orden formateada
+        res.status(200).json(formattedOrder);
+    } catch (error) {
+        console.error("Error en SeeOrderById: ", error);
+        res.status(500).json({
+            message: "Error al obtener los detalles de la orden",
+            error: error.message
+        });
+    }
+};
+
+
+
 
 export{
     createOrder,
     updateOrder,
     SeeAllOrders,
+    SeeOrderById,
     updateStateOrder,
-    deleteOrder,
+    deleteOrder
     
 }
