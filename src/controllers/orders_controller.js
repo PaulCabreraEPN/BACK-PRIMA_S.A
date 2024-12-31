@@ -280,6 +280,10 @@ const deleteOrder = async (req, res) => {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
+        if (orderToDelete.status !== "Pending") {
+            return res.status(400).json({ message: "Lo sentimos, la orden ya fué procesada" });
+        }
+
         // Reestablecer el stock de los productos relacionados
         const productIds = orderToDelete.products.map(product => parseInt(product.productId));
         const productsInDB = await Products.find({ id: { $in: productIds } });
