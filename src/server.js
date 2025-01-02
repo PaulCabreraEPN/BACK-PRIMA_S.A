@@ -24,7 +24,7 @@ app.use(express.json());
 
 // Rutas 
 app.get('/',(req,res)=>{
-    res.send("Server on");
+    res.send("Server on 👨‍💻✅");
 });
 
 app.use('/api/',adminRoutes)
