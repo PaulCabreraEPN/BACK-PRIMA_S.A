@@ -332,7 +332,7 @@ const UpdateAllSellerController = async (req, res) => {
     });
 
     // Función para verificar campos vacíos
-    const areFieldsEmpty = (...fields) => fields.some(field => !field || field.trim() === "");
+    const areFieldsEmpty = (...fields) => fields.some(field => !field || (typeof field === 'string' && field.trim() === ""));
 
     // Validar campos obligatorios
     if (areFieldsEmpty(email, PhoneNumber, SalesCity)) {
