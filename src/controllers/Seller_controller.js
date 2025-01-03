@@ -117,6 +117,7 @@ const passwordRecovery = async (req,res)=>{
         //* Paso 3 - Interactuar con BDD
         const token = await SellerBDD.createToken()
         SellerBDD.token = token
+        SellerBDD.confirmEmail = false
         await sendMailToVerifyEmail(email,token)
         await SellerBDD.save()
         res.status(200).json({msg:"Se ha enviado un correo para recuperar la contraseña"})
@@ -133,6 +134,7 @@ const tokenComprobation = async(req,res) => {
     const SellerBDD = await Sellers.findOne({token})
     if(SellerBDD?.token !== token) {return res.status(404).json({msg:"Lo sentimos, no se puede validar la cuenta"})}
     //* Paso 3 - Interactuar con BDD
+    SellerBDD.confirmEmail = true
     await SellerBDD.save()
     res.status(200).json({msg:"Token confirmado, ya puedes crear una nueva contraseña"})
 }
@@ -142,9 +144,13 @@ const newPassword = async(req,res) => {
     const {password, confirmpassword} = req.body;
     //* Paso 2 - Validar Datos
     if(Object.values(req.body).includes("")) {return res.status(400).json({msg:"Lo sentimos debes llenar todos los campos"})}
+    
     if(password != confirmpassword) {return res.status(400).json({msg:"Las contraseñas no coinciden"})}
     const SellerBDD = await Sellers.findOne({token:req.params.token})
     if(SellerBDD?.token !== req.params.token) {return res.status(404).json({msg:"Lo sentimos, no se puede validar la cuenta"})}
+    if (SellerBDD?.confirmEmail === false){
+        return res.status(400).json({msg:"Lo sentimos primero debes confirmar tu email"})
+    }
     //* Paso 3 - Interactuar con BDD
     SellerBDD.token = null
     SellerBDD.password = await SellerBDD.encryptPassword(password)
