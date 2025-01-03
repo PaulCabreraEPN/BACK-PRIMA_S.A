@@ -4,7 +4,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "vitest",
     "start": "nodemon src/index.js",
     "dev": "node --watch src/index.js"
   },
@@ -18,7 +18,15 @@
     "dotenv": "^16.4.7",
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
-    "mongoose": "^8.9.1",
+    "mongoose": "^8.9.3",
     "nodemailer": "^6.9.16"
+  },
+  "devDependencies": {
+    "supertest": "^7.0.0",
+    "vitest": "^2.1.8"
+  },
+  "vitest": {
+  "include": ["tests/**/*.test.js"],
+  "exclude": ["node_modules/**", "dist/**"]
   }
 }
