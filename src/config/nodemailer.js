@@ -99,23 +99,23 @@ const sendMailToVerifyEmail = async(email, token) => {
     let info = await transporter.sendMail({
         from: process.env.USER_MAILTRAP,
         to: email,
-        subject: "Verifica tu cuenta en PRIMA S.A.",
+        subject: "Cambiar contraseña en cuenta PRIMA S.A.",
         html: `
         <html>
             <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
                 <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
-                        <h2 style="color: #004ba0;">Verificación de Correo Electrónico</h2>
+                        <h2 style="color: #004ba0;">Autentificación de cuenta</h2>
                     </div>
                     <p style="color: #333;">Hola,</p>
-                    <p style="color: #333;">Gracias por registrarte en PRIMA S.A. Para completar tu registro, necesitamos verificar tu dirección de correo electrónico.</p>
-                    <p style="color: #333;">Por favor, haz clic en el siguiente botón para verificar tu cuenta:</p>
+                    <p style="color: #333;">Hemos recibido una solicitud de cambio de contraseña para tu cuenta en PRIMA S.A.</p>
+                    <p style="color: #333;">Por favor, haz click en el siguiente botón para continuar:</p>
                     <p style="text-align: center;">
-                        <a href="${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Verificar mi cuenta</a>
+                        <a href="${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Cambiar contraseña</a>
                     </p>
-                    <p style="color: #333;">Si no creaste una cuenta en PRIMA S.A., puedes ignorar este mensaje.</p>
-                    <p style="color: #333;">Si tienes problemas con el botón, copia y pega el siguiente enlace en tu navegador:</p>
+                    <p style="color: #333;">En caso de no haber realizado la solicitud, puede ignorar este mensaje.</p>
+                    <p style="color: #333;">Si tiene problemas con el botón, copia y pega el siguiente enlace en tu navegador:</p>
                     <p style="word-break: break-all; color: #004ba0;">
                         ${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}
                     </p>
