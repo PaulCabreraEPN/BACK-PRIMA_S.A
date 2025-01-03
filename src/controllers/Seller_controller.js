@@ -93,6 +93,9 @@ const loginSeller = async (req,res)=>{
         if(!(username) || !(password)){return res.status(400).json({msg:"Faltan datos por ingresar"})}
         //* Paso 3 - Interactuar con BDD
         const SellerBDD = await Sellers.findOne({username})
+        if (SellerBDD?.confirmEmail === false){
+            return res.status(400).json({msg:"Lo sentimos primero debes confirmar tu email"})
+        }
         if(!SellerBDD){return res.status(400).json({msg:"Usuario no encontrado"})}
         const verifyPassword = await SellerBDD.matchPassword(password)
         if(!verifyPassword){return res.status(400).json({msg:"Contraseña incorrecta"})}
