@@ -15,8 +15,6 @@ const verificarAutenticacion = async (req,res,next)=>{
     
     try {
         const {id,rol} = jwt.verify(authorization.split(' ')[1],process.env.JWT_SECRET)
-        console.log(id,rol);
-        
         if (rol==="admin"){
             req.veterinarioBDD = await admins.findById(id).lean().select("-password");
             next();

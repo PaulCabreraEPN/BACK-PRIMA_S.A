@@ -12,7 +12,7 @@ router.post('/recovery-password-admin', recovery_pass_admin)
 
 //* Rutas Géstión Vendedores
 // Ruta para registrar 
-router.post('/register',registerSeller)
+router.post('/register',verificarAutenticacion,registerSeller)
 router.get('/confirm-account/:token',confirmEmail)
 router.post('/login',loginSeller)
 router.post('/recovery-password',passwordRecovery)
