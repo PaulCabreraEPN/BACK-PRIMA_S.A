@@ -322,7 +322,7 @@ const updateSellerController = async (req, res) => {
 const UpdateAllSellerController = async (req, res) => {
     //* Paso 1 - Tomar Datos del Request
     const { id } = req.params; // ID del vendedor a actualizar
-    const { email, PhoneNumber, SalesCity, ...otherData } = req.body; // Datos a actualizar
+    const { email, PhoneNumber, SalesCity,password, ...otherData } = req.body; // Datos a actualizar
 
     //* Paso 2 - Validar Datos
 
@@ -335,7 +335,7 @@ const UpdateAllSellerController = async (req, res) => {
     const areFieldsEmpty = (...fields) => fields.some(field => !field || (typeof field === 'string' && field.trim() === ""));
 
     // Validar campos obligatorios
-    if (areFieldsEmpty(email, PhoneNumber, SalesCity)) {
+    if (areFieldsEmpty(email, PhoneNumber, SalesCity, password)) {
         return res.status(400).json({
             error: "Datos vacíos. Por favor, llene todos los campos."
         });
@@ -343,23 +343,34 @@ const UpdateAllSellerController = async (req, res) => {
 
     try {
         //* Paso 3 - Interactuar con BDD
-        
-
+        const Newseller = new Sellers();
+        const hashedPassword = await Newseller.encryptPassword(password);
         // Construir los datos para la actualización
         const updatedData = {
             email,
             PhoneNumber,
             SalesCity,
+            password: hashedPassword,
             ...otherData // otros campos adicionales que podrían ser enviados en el request
         };
 
         // Actualizar el vendedor en la base de datos
         const updatedSeller = await Sellers.findByIdAndUpdate(id, updatedData, { new: true });
+        
+        if (!updatedSeller) {
+            return res.status(404).json({
+                msg: `No se encontró el vendedor con el id ${id}`
+            });
+        }
+
+        // Desestructurar para excluir el password
+        const { password: _, ...sellerWithoutPassword } = updatedSeller._doc;
 
         // Responder con el vendedor actualizado (sin el campo "password" por seguridad)
         return res.status(200).json({
             msg: "Vendedor actualizado correctamente",
-            data: updatedSeller,
+            data: sellerWithoutPassword, 
+            password: "No se puede mostrar la contraseña por seguridad"
         });
     } catch (error) {
         // Manejo de errores
