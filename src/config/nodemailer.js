@@ -38,7 +38,7 @@ const SendMailCredentials = (userMail, name, username, password, token) => {
                     <h3 style="color: #004ba0;">1. Confirma tu correo electrónico:</h3>
                     <p style="color: #333;">Antes de iniciar sesión, necesitas confirmar tu cuenta. Haz clic en el siguiente enlace:</p>
                     <p style="text-align: center;">
-                        <a href="${process.env.URL_BACK}/confirm-account/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Confirmar mi cuenta</a>
+                        <a href="${process.env.VITE_URL_FRONTEND}/confirm-account/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Confirmar mi cuenta</a>
                     </p>
                     <h3 style="color: #004ba0;">2. Descarga la app:</h3>
                     <p style="color: #333;">Para acceder a tu cuenta, descarga nuestra app desde el siguiente enlace:</p>
