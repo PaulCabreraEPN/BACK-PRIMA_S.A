@@ -19,14 +19,21 @@
     "express": "^4.21.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.9.3",
-    "nodemailer": "^6.9.16"
+    "nodemailer": "^6.9.16",
+    "swagger-jsdoc": "^6.2.8",
+    "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
     "supertest": "^7.0.0",
     "vitest": "^2.1.8"
   },
   "vitest": {
-  "include": ["tests/**/*.test.js"],
-  "exclude": ["node_modules/**", "dist/**"]
+    "include": [
+      "tests/**/*.test.js"
+    ],
+    "exclude": [
+      "node_modules/**",
+      "dist/**"
+    ]
   }
 }

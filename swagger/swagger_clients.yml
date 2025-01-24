@@ -1,0 +1,136 @@
+components:
+  schemas:
+    Client:
+      type: object
+      properties:
+        Name:
+          type: string
+          example: "Ferretería El Constructor"
+          description: Nombre del cliente o empresa
+        Ruc:
+          type: number
+          example: 1234567890001
+          description: RUC del cliente
+        Address:
+          type: string
+          example: "Av. Principal 123 y Secundaria"
+          description: Dirección del cliente
+        telephone:
+          type: number
+          example: 0987654321
+          description: Teléfono de contacto
+        email:
+          type: string
+          example: "contacto@ferreteria.com"
+          description: Correo electrónico
+        credit:
+          type: string
+          example: "A"
+          description: Categoría de crédito
+        state:
+          type: string
+          example: "Activo"
+          description: Estado del cliente
+
+paths:
+  /api/clients:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Clientes
+      summary: Obtener todos los clientes
+      description: Retorna lista de todos los clientes registrados
+      responses:
+        200:
+          description: Lista de clientes obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Client'
+              example:
+                - Name: "Ferretería El Constructor"
+                  Ruc: 1234567890001
+                  Address: "Av. Principal 123 y Secundaria"
+                  telephone: 0987654321
+                  email: "contacto@ferreteria.com"
+                  credit: "A"
+                  state: "Activo"
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: "Error al obtener los clientes"
+                  error: "Error interno del servidor"
+
+  /api/clients/{ruc}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Clientes
+      summary: Obtener cliente por RUC
+      description: Retorna la información de un cliente específico por su RUC
+      parameters:
+        - in: path
+          name: ruc
+          required: true
+          description: RUC del cliente
+          schema:
+            type: string
+          example: "1234567890001"
+      responses:
+        200:
+          description: Cliente encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  data:
+                    $ref: '#/components/schemas/Client'
+              example:
+                data:
+                  _id: "65f0e3b2c54a8c3b7c9d1234"
+                  name: "Ferretería El Constructor"
+                  ruc: 1234567890001
+                  address: "Av. Principal 123 y Secundaria"
+                  telephone: 0987654321
+                  email: "contacto@ferreteria.com"
+                  credit: "A"
+                  state: "Activo"
+        400:
+          description: RUC inválido
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  msg: "Por favor, ingrese un RUC válido"
+        404:
+          description: Cliente no encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  msg: "Cliente no encontrado"
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  msg: "Error al buscar el cliente"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT

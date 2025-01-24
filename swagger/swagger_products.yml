@@ -1,0 +1,112 @@
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id:
+          type: number
+          example: 1001
+          description: ID único del producto
+        product_name:
+          type: string
+          example: "Cemento Holcim"
+          description: Nombre del producto
+        measure:
+          type: string
+          example: "50kg"
+          description: Unidad de medida
+        price:
+          type: number
+          example: 8.50
+          description: Precio unitario
+        stock:
+          type: number
+          example: 100
+          description: Cantidad disponible
+        imgUrl:
+          type: string
+          example: "https://ejemplo.com/imagen.jpg"
+          description: URL de la imagen del producto
+
+paths:
+  /api/products:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Productos
+      summary: Obtener todos los productos
+      description: Retorna lista de todos los productos disponibles
+      responses:
+        200:
+          description: Lista de productos obtenida exitosamente
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Product'
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: "Error al obtener los productos"
+                  error: "Error interno del servidor"
+
+  /api/products/{id}:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Productos
+      summary: Obtener producto por ID
+      description: Retorna un producto específico por su ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          description: ID numérico del producto
+          schema:
+            type: number
+          example: 1001
+      responses:
+        200:
+          description: Producto encontrado
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Product'
+        400:
+          description: ID inválido
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  msg: "El ID debe ser un número válido"
+        404:
+          description: Producto no encontrado
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  msg: "Producto no encontrado"
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                example:
+                  message: "Error al obtener el producto"
+                  error: "Error interno del servidor"
+
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
