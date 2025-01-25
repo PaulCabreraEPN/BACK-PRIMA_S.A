@@ -21,7 +21,7 @@ router.post('/recovery-password/:token',newPassword)
 // Ruta para ver
 router.get('/sellers', verificarAutenticacion, seeSellers)
 // Rutas para Buscar
-router.get('/sellers-numberid', verificarAutenticacion, searchSellerByNumberId)
+router.get('/sellers-numberid/:numberID', verificarAutenticacion, searchSellerByNumberId)
 router.get('/sellers/:id', verificarAutenticacion, searchSellerById)
 // Rutas para actualizar 
 router.patch("/updateSeller/:id", verificarAutenticacion, updateSellerController)
