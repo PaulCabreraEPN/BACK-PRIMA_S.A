@@ -225,7 +225,7 @@ const searchSellerById = async (req, res) => {
 //* Buscar un vendedor por cedula
 const searchSellerByNumberId = async (req, res) =>{
     //* Paso 1 - Tomar Datos del Request
-    const { numberID } = req.body;
+    const { numberID } = req.params;
     
     //* Paso 2 - Validar Datos
     if (!numberID || numberID.toString().trim() === ""){
