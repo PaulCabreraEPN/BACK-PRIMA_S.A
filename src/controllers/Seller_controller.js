@@ -164,7 +164,7 @@ const seeSellers = async(req,res) => {
         const sellers = await Sellers.find()
         const response = sellers.map(seller => ({
             _id: seller._id, 
-            name: seller.names,
+            names: seller.names,
             lastNames: seller.lastNames,
             numberID: seller.numberID,
             email: seller.email,
