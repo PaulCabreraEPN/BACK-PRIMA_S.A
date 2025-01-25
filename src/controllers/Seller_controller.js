@@ -281,7 +281,7 @@ const updateSellerController = async (req, res) => {
     });
 
     // Obtener los atributos válidos del modelo
-    const validFields = ['email', 'PhoneNumber', 'SalesCity','names','lastNames','numberID','role','status'];
+    const validFields = ['email', 'PhoneNumber', 'SalesCity', 'names', 'lastNames', 'numberID', 'role', 'status'];
     const filteredUpdates = {};
 
     // Filtrar los campos válidos para la actualización
