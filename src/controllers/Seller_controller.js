@@ -172,6 +172,7 @@ const seeSellers = async(req,res) => {
             PhoneNumber: seller.PhoneNumber,
             SalesCity: seller.SalesCity,
             role: seller.role,
+            status: seller.status
         }));
         res.status(200).json(response);
     } catch (error) {

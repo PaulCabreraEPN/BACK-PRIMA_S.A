@@ -1,7 +1,5 @@
 import mongoose, {Schema,model} from 'mongoose'
 
-
-
 const orderSchema = new Schema({
     customer: {
         type: Number,
