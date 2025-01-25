@@ -281,7 +281,7 @@ const updateSellerController = async (req, res) => {
     });
 
     // Obtener los atributos válidos del modelo
-    const validFields = ['email', 'PhoneNumber', 'SalesCity'];
+    const validFields = ['email', 'PhoneNumber', 'SalesCity','names','lastNames','numberID','role','status'];
     const filteredUpdates = {};
 
     // Filtrar los campos válidos para la actualización
@@ -323,7 +323,7 @@ const updateSellerController = async (req, res) => {
 const UpdateAllSellerController = async (req, res) => {
     //* Paso 1 - Tomar Datos del Request
     const { id } = req.params; // ID del vendedor a actualizar
-    const { email, PhoneNumber, SalesCity,password, ...otherData } = req.body; // Datos a actualizar
+    const { email, PhoneNumber, SalesCity,names,lastNames,password, ...otherData } = req.body; // Datos a actualizar
 
     //* Paso 2 - Validar Datos
 
@@ -336,7 +336,7 @@ const UpdateAllSellerController = async (req, res) => {
     const areFieldsEmpty = (...fields) => fields.some(field => !field || (typeof field === 'string' && field.trim() === ""));
 
     // Validar campos obligatorios
-    if (areFieldsEmpty(email, PhoneNumber, SalesCity, password)) {
+    if (areFieldsEmpty(email, PhoneNumber, SalesCity,names,lastNames)) {
         return res.status(400).json({
             error: "Datos vacíos. Por favor, llene todos los campos."
         });
@@ -344,10 +344,13 @@ const UpdateAllSellerController = async (req, res) => {
 
     try {
         //* Paso 3 - Interactuar con BDD
+        const newPassword = passwordGenerator()
         const Newseller = new Sellers();
-        const hashedPassword = await Newseller.encryptPassword(password);
+        const hashedPassword = await Newseller.encryptPassword(newPassword);
         // Construir los datos para la actualización
         const updatedData = {
+            names,
+            lastNames,
             email,
             PhoneNumber,
             SalesCity,
