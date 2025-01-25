@@ -205,7 +205,7 @@ const searchSellerById = async (req, res) => {
         }
         const idSeller = {
             _id: seller._id, 
-            name: seller.names,
+            names: seller.names,
             lastNames: seller.lastNames,
             numberID: seller.numberID,
             email: seller.email,
