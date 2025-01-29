@@ -77,6 +77,7 @@ const confirmEmail = async (req,res)=>{
     //* Paso 3 Interactuar con BDD
     SellerBDD.token = null
     SellerBDD.confirmEmail = true
+    SellerBDD.status = true
     await SellerBDD.save()
     res.status(200).json({msg:"Token confirmado, ya puedes iniciar sesión"})
     } catch (error) {
