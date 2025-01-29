@@ -37,8 +37,8 @@ const orderSchema = new Schema({
     },
     status: {
         type: String,
-        enum: ['Pending', 'Completed', 'Cancelled'],
-        default: 'Pending'
+        enum: ['Pendiente', 'En proceso', 'Enviado','Cancelado'],
+        default: 'Pendiente'
     },
     registrationDate: {
         type: Date,

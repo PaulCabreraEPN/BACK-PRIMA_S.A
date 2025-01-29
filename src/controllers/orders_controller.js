@@ -120,7 +120,7 @@ const updateOrder = async (req, res) => {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
-        if (orderToUpdate.status !== "Pending") {
+        if (orderToUpdate.status !== "Pendiente") {
             return res.status(400).json({ message: "El pedido ya no se puede actualizar" });
         }
 
@@ -280,7 +280,7 @@ const deleteOrder = async (req, res) => {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
-        if (orderToDelete.status !== "Pending") {
+        if (orderToDelete.status !== "Pendiente") {
             return res.status(400).json({ message: "Lo sentimos, la orden ya fué procesada" });
         }
 
