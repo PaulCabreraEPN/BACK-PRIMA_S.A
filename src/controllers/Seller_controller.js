@@ -258,6 +258,7 @@ const searchSellerByNumberId = async (req, res) =>{
             PhoneNumber: seller.PhoneNumber,
             SalesCity: seller.SalesCity,
             role: seller.role,
+            status: seller.status
         }
 
         return res.status(200).json({ msg: idSeller });
