@@ -33,7 +33,7 @@ const GetTopSellers = async (req, res) => {
                 }
             },
             {
-                $sort: { totalSales: -1 }  // Ordenar por el total de ventas en orden descendente
+                $sort: { totalSales: 1 }  // Ordenar por el total de ventas en orden descendente
             },
             {
                 $limit: 5  // Limitar a los 5 vendedores con más ventas
@@ -86,7 +86,7 @@ const GetSalesBySeller = async (req, res) => {
                 }
             },
             {
-                $sort: { totalSales: -1 } // Ordenar por total de ventas en orden descendente
+                $sort: { totalSales: 1 } // Ordenar por total de ventas en orden descendente
             }
         ]);
 
