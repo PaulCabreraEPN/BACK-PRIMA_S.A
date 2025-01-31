@@ -33,26 +33,29 @@ const GetTopSellers = async (req, res) => {
                 }
             },
             {
-                $sort: { totalSales: 1 }  // Ordenar por el total de ventas en orden descendente
+                $sort: { totalSales: -1 }  // Ordenar por el total de ventas en orden descendente
             },
             {
                 $limit: 5  // Limitar a los 5 vendedores con más ventas
             }
         ]);
 
-        // Paso 2: Obtener los IDs de los vendedores que aparecen en el top
+        // Paso 2: Ordenar los datos de ventas de menor a mayor
+        topSellersData.sort((a, b) => a.totalSales - b.totalSales); // Ordenar por totalSales en orden ascendente
+
+        // Paso 3: Obtener los IDs de los vendedores que aparecen en el top
         const sellerIds = topSellersData.map(order => order._id);
 
-        // Paso 3: Consultar la base de datos para obtener los detalles completos de los vendedores
+        // Paso 4: Consultar la base de datos para obtener los detalles completos de los vendedores
         const sellerDetails = await sellers.find({ _id: { $in: sellerIds } });
 
-        // Paso 4: Crear un mapa de vendedores para acceso rápido
+        // Paso 5: Crear un mapa de vendedores para acceso rápido
         const sellerMap = sellerDetails.reduce((map, seller) => {
             map[seller._id.toString()] = seller;
             return map;
         }, {});
 
-        // Paso 5: Crear los dos arreglos de resultados
+        // Paso 6: Crear los dos arreglos de resultados
         const sellerNames = topSellersData.map(order => {
             const seller = sellerMap[order._id.toString()];
             return seller ? `${seller.names} ${seller.lastNames}` : "Vendedor no encontrado";
@@ -74,6 +77,7 @@ const GetTopSellers = async (req, res) => {
         });
     }
 };
+
 
 const GetSalesBySeller = async (req, res) => {
     try {
