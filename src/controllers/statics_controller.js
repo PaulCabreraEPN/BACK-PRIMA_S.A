@@ -75,11 +75,56 @@ const GetTopSellers = async (req, res) => {
     }
 };
 
+const GetSalesBySeller = async (req, res) => {
+    try {
+        // Paso 1: Obtener las órdenes y agrupar por vendedor
+        const salesBySeller = await orders.aggregate([
+            {
+                $group: {
+                    _id: "$seller", // Agrupar por el ID del vendedor
+                    totalSales: { $sum: "$totalWithTax" }, // Sumar el totalWithTax de cada pedido
+                }
+            },
+            {
+                $sort: { totalSales: -1 } // Ordenar por total de ventas en orden descendente
+            }
+        ]);
+
+        // Paso 2: Obtener los IDs de los vendedores que aparecen en las órdenes
+        const sellerIds = salesBySeller.map(order => order._id);
+
+        // Paso 3: Consultar los detalles completos de los vendedores
+        const sellersData = await sellers.find({ _id: { $in: sellerIds } });
+
+        // Paso 4: Crear un mapa de vendedores para acceso rápido
+        const sellerMap = sellersData.reduce((map, seller) => {
+            map[seller._id.toString()] = seller.names; // Solo guardamos el nombre del vendedor
+            return map;
+        }, {});
+
+        // Paso 5: Crear dos arreglos con los nombres de los vendedores y las ventas totales
+        const names = salesBySeller.map(order => sellerMap[order._id.toString()] || "Desconocido");
+        const totalSales = salesBySeller.map(order => order.totalSales);
+
+        // Responder con los dos arreglos: nombres y totalSales
+        res.status(200).json({ names, totalSales });
+
+    } catch (error) {
+        console.error("Error en GetSalesBySeller: ", error);
+        res.status(500).json({
+            message: "Error al obtener las ventas por vendedor",
+            error: error.message
+        });
+    }
+};
+
+
 
 
 
 export {
     getAllCount,
-    GetTopSellers
+    GetTopSellers,
+    GetSalesBySeller
 
 }
