@@ -250,7 +250,7 @@ const searchSellerByNumberId = async (req, res) =>{
 
         const idSeller = {
             _id: seller._id, 
-            name: seller.names,
+            name: seller.Names,
             lastNames: seller.lastNames,
             numberID: seller.numberID,
             email: seller.email,
