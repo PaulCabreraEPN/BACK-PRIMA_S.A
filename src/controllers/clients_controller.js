@@ -33,9 +33,9 @@ const getClientsById = async (req, res) => {
         // Preparar los datos del cliente para enviar
         const clientData = {
             _id: client._id,
-            name: client.name,
-            ruc: client.ruc,
-            address: client.address,
+            name: client.Name,
+            ruc: client.Ruc,
+            address: client.Address,
             telephone: client.telephone,
             email: client.email,
             credit: client.credit,
