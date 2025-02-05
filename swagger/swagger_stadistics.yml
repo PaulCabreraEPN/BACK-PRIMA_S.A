@@ -1,0 +1,129 @@
+paths:
+  /api/statics/count:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Estadísticas
+      summary: Obtener conteo general
+      description: Retorna el conteo de productos, órdenes, vendedores activos y clientes
+      responses:
+        200:
+          description: Conteo obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  products:
+                    type: number
+                    example: 150
+                  orders:
+                    type: number
+                    example: 300
+                  sellers:
+                    type: number
+                    example: 25
+                  clients:
+                    type: number
+                    example: 100
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener el conteo de productos"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+  /api/statics/top-sellers:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Estadísticas
+      summary: Obtener top 5 vendedores
+      description: Retorna los 5 vendedores con más ventas realizadas
+      responses:
+        200:
+          description: Top vendedores obtenido exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  sellerNames:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Juan Pérez", "María García", "Carlos López"]
+                  salesCounts:
+                    type: array
+                    items:
+                      type: number
+                    example: [50, 45, 40]
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener el top de vendedores"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+  /api/statics/sales-by-seller:
+    get:
+      security:
+        - bearerAuth: []
+      tags:
+        - Estadísticas
+      summary: Obtener ventas por vendedor
+      description: Retorna el total de ventas monetarias por cada vendedor
+      responses:
+        200:
+          description: Ventas por vendedor obtenidas exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  names:
+                    type: array
+                    items:
+                      type: string
+                    example: ["Juan Pérez", "María García", "Carlos López"]
+                  totalSales:
+                    type: array
+                    items:
+                      type: number
+                    example: [15000.50, 12500.75, 10200.25]
+        500:
+          description: Error del servidor
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener las ventas por vendedor"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
