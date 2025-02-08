@@ -122,13 +122,57 @@ const GetSalesBySeller = async (req, res) => {
     }
 };
 
+const getWeeklySales = async (req, res) => {
+    try {
+        const today = new Date();
+        const startOfWeek = new Date(today);
+        startOfWeek.setDate(today.getDate() - today.getDay()); // Primer día de la semana (Domingo)
+        startOfWeek.setHours(0, 0, 0, 0);
 
+        const endOfWeek = new Date(today);
+        endOfWeek.setDate(today.getDate() + (6 - today.getDay())); // Último día de la semana (Sábado)
+        endOfWeek.setHours(23, 59, 59, 999);
+
+        // Obtener órdenes de la semana actual
+        const weeklyOrders = await orders.find({
+            createdAt: { $gte: startOfWeek, $lte: endOfWeek }
+        });
+
+        // Inicializar arrays para los días de la semana y las ventas
+        const weekDays = [];
+        const salesByDay = [];
+
+        for (let i = 0; i < 7; i++) {
+            const day = new Date(startOfWeek);
+            day.setDate(startOfWeek.getDate() + i);
+            const formattedDay = day.toISOString().split("T")[0];
+
+            weekDays.push(formattedDay);
+            salesByDay.push(0); // Inicializa en 0
+        }
+
+        // Contar las ventas por día
+        weeklyOrders.forEach(order => {
+            const orderDate = order.createdAt.toISOString().split("T")[0];
+            const index = weekDays.indexOf(orderDate);
+            if (index !== -1) {
+                salesByDay[index] += 1; // Incrementa ventas en ese día
+            }
+        });
+
+        res.status(200).json({ weekDays, salesByDay });
+    } catch (error) {
+        console.error("Error en getWeeklySales: ", error);
+        res.status(500).json({ message: "Error al obtener las ventas semanales", error: error.message });
+    }
+};
 
 
 
 export {
     getAllCount,
     GetTopSellers,
-    GetSalesBySeller
+    GetSalesBySeller,
+    getWeeklySales
 
 }
