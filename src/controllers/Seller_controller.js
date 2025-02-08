@@ -3,7 +3,7 @@ import Sellers from '../models/sellers.js'
 import {SendMailCredentials,sendMailToVerifyEmail} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
-import generarJWT from '../middlewares/JWT.js'
+import {generarJWT} from '../middlewares/JWT.js'
 
 //* Registrar un Vendedor
 const registerSeller = async (req, res) => {

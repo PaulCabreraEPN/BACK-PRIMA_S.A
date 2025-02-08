@@ -7,6 +7,7 @@ import productRoutes from './routers/products_routes.js'
 import clientsRoutes from './routers/clients_routes.js'
 import orderRoutes from './routers/order_routes.js'
 import staticsRoutes from './routers/statics_routes.js'
+import authRoutes from './routers/auth_routes.js'
 import swaggerUI from 'swagger-ui-express'
 import specs from '../swagger/swagger.js';
 
@@ -35,6 +36,7 @@ app.use('/api/',productRoutes)
 app.use('/api/',clientsRoutes)
 app.use('/api/',orderRoutes)
 app.use('/api/',staticsRoutes)
+app.use('/api/',authRoutes)
 app.use('/api-docs',swaggerUI.serve,swaggerUI.setup(specs))
 
 
