@@ -7,6 +7,6 @@ const router = Router();
 router.get('/statics/count', verificarAutenticacion, getAllCount)
 router.get('/statics/top-sellers', verificarAutenticacion, GetTopSellers)
 router.get('/statics/sales-by-seller', verificarAutenticacion, GetSalesBySeller)
-router.get('/statics/orders-by-week', getWeeklySales)
+router.get('/statics/orders-by-week', verificarAutenticacion, getWeeklySales)
 
 export default router;
