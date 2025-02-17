@@ -1,11 +1,12 @@
 import { body, param } from 'express-validator';
 
 // Validaciones para el login de administrador
+const regex= /^[A-Za-z0-9@#$%&*()_\-]+$/
 export const validateAdminLogin = [
     body('username')
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
-        .matches(/^[A-Za-z0-9@#$%&*()_\-]+$/)
+        .matches(regex)
         .withMessage('Formato de usuario inválido'),
     
     body('password')
@@ -20,7 +21,7 @@ export const validateAdminPasswordRecovery = [
     body('username')
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
-        .matches(/^[a-zA-Z0-9_]+$/).withMessage('El usuario solo puede contener letras, números y guiones bajos')
+        .matches(regex).withMessage('El usuario solo puede contener letras')
 ];
 
 // Validaciones para el login de vendedor
@@ -29,13 +30,13 @@ export const validateSellerLogin = [
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
         // Validación más flexible para usernames generados
-        .matches(/^[A-Z][A-Za-z0-9@]*\d{1,4}$/)
+        .matches(regex)
         .withMessage('Formato de usuario inválido'),
     
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
         // Validación más flexible para contraseñas generadas
-        .matches(/^[a-zA-Z0-9!@#$%&*()]{8,}$/)
+        .matches(regex)
         .withMessage('Formato de contraseña inválido')
 ];
 
