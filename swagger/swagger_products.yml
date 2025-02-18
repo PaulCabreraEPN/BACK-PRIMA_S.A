@@ -1,112 +1,184 @@
+# swagger/swagger_products.yml
 components:
   schemas:
     Product:
+      type: object
+      required:
+        - id
+        - product_name
+        - measure
+        - price
+        - stock
+        - imgUrl
+      properties:
+        id:
+          type: number
+          example: 1001
+          description: "ID único del producto (número entero)"
+        product_name:
+          type: string
+          example: "Cemento Holcim"
+          description: "Nombre completo del producto"
+          minLength: 3
+          maxLength: 100
+        measure:
+          type: string
+          example: "50kg"
+          description: "Unidad de medida del producto"
+          enum: [
+            "kg",
+            "g",
+            "l",
+            "ml",
+            "unidad",
+            "docena",
+            "m",
+            "m²",
+            "m³",
+            "galón"
+          ]
+        price:
+          type: number
+          format: float
+          example: 8.50
+          description: "Precio unitario (sin IVA)"
+          minimum: 0.01
+        stock:
+          type: number
+          example: 100
+          description: "Cantidad disponible en inventario"
+          minimum: 0
+        imgUrl:
+          type: string
+          format: uri
+          example: "https://ejemplo.com/imagen.jpg"
+          description: "URL de la imagen del producto"
+
+    ProductResponse:
       type: object
       properties:
         id:
           type: number
           example: 1001
-          description: ID único del producto
         product_name:
           type: string
           example: "Cemento Holcim"
-          description: Nombre del producto
         measure:
           type: string
           example: "50kg"
-          description: Unidad de medida
         price:
           type: number
           example: 8.50
-          description: Precio unitario
         stock:
           type: number
           example: 100
-          description: Cantidad disponible
         imgUrl:
           type: string
           example: "https://ejemplo.com/imagen.jpg"
-          description: URL de la imagen del producto
 
 paths:
   /api/products:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Productos
-      summary: Obtener todos los productos
-      description: Retorna lista de todos los productos disponibles
+      summary: Listar todos los productos
+      description: >
+        Obtiene la lista completa de productos disponibles.
+        Los productos se devuelven ordenados por ID.
+        Se excluye el campo _id de MongoDB.
+      security:
+        - bearerAuth: []
       responses:
-        200:
+        '200':
           description: Lista de productos obtenida exitosamente
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Product'
-        500:
-          description: Error del servidor
+                  $ref: '#/components/schemas/ProductResponse'
+              example:
+                - id: 1001
+                  product_name: "Cemento Holcim"
+                  measure: "50kg"
+                  price: 8.50
+                  stock: 100
+                  imgUrl: "https://ejemplo.com/cemento.jpg"
+                - id: 1002
+                  product_name: "Varilla corrugada 12mm"
+                  measure: "m"
+                  price: 12.75
+                  stock: 500
+                  imgUrl: "https://ejemplo.com/varilla.jpg"
+        '500':
+          description: Error al obtener los productos
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "Error al obtener los productos"
-                  error: "Error interno del servidor"
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener los productos"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
 
   /api/products/{id}:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Productos
       summary: Obtener producto por ID
-      description: Retorna un producto específico por su ID
+      description: >
+        Busca un producto específico por su ID numérico.
+        Se excluye el campo _id de MongoDB.
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
           required: true
-          description: ID numérico del producto
           schema:
             type: number
+          description: ID numérico del producto
           example: 1001
       responses:
-        200:
+        '200':
           description: Producto encontrado
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Product'
-        400:
+                $ref: '#/components/schemas/ProductResponse'
+        '400':
           description: ID inválido
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "El ID debe ser un número válido"
-        404:
+                properties:
+                  msg:
+                    type: string
+                    example: "El ID debe ser un número válido"
+        '404':
           description: Producto no encontrado
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Producto no encontrado"
-        500:
+                properties:
+                  msg:
+                    type: string
+                    example: "Producto no encontrado"
+        '500':
           description: Error del servidor
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "Error al obtener el producto"
-                  error: "Error interno del servidor"
-
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener el producto"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"

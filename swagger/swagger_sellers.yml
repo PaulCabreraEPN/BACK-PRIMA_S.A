@@ -44,7 +44,7 @@ paths:
   /api/login:
     post:
       tags:
-        - Vendedor
+        - Vendedores
       summary: Login vendedor
       requestBody:
         required: true
@@ -92,7 +92,7 @@ paths:
   /api/confirm-account/{token}:
     get:
       tags:
-        - Vendedor
+        - Vendedores
       summary: Confirmar cuenta de vendedor
       parameters:
         - in: path
@@ -122,7 +122,7 @@ paths:
   /api/recovery-password:
     post:
       tags:
-        - Vendedor
+        - Vendedores
       summary: Solicitar recuperación de contraseña
       requestBody:
         required: true
@@ -160,7 +160,7 @@ paths:
   /api/recovery-password/{token}:
     get:
       tags:
-        - Vendedor
+        - Vendedores
       summary: Verificar token de recuperación
       parameters:
         - in: path
@@ -189,7 +189,7 @@ paths:
 
     post:
       tags:
-        - Vendedor
+        - Vendedores
       summary: Establecer nueva contraseña
       parameters:
         - in: path

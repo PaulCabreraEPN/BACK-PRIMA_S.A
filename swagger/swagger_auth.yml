@@ -1,0 +1,218 @@
+# swagger/swagger_auth.yml
+components:
+  schemas:
+    LoginCredentials:
+      type: object
+      required:
+        - username
+        - password
+      properties:
+        username:
+          type: string
+          example: "juan.perez"
+          description: "Nombre de usuario"
+        password:
+          type: string
+          format: password
+          example: "Password123*"
+          description: "Contraseña del usuario"
+
+    TokenResponse:
+      type: object
+      properties:
+        msg:
+          type: string
+          example: "Inicio de sesión exitoso"
+        tokenJWT:
+          type: string
+          example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        inf:
+          type: object
+          properties:
+            _id:
+              type: string
+              example: "65f0e3b2c54a8c3b7c9d1234"
+            username:
+              type: string
+              example: "juan.perez"
+            role:
+              type: string
+              example: "Seller"
+            createdAt:
+              type: string
+              format: date-time
+
+paths:
+  /api/login-admin:
+    post:
+      tags:
+        - Autenticación
+      summary: Login de administrador
+      description: >
+        Endpoint para autenticación de administradores.
+        
+        **Notas importantes:**
+        * Los administradores tienen 3 intentos de login antes de que su cuenta se bloquee
+        * El bloqueo requiere intervención manual de otro administrador para desbloquear
+        * Las contraseñas deben ser exactamente de 8 caracteres
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Error en credenciales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: "Lo sentimos, debes llenar todos los campos"
+              examples:
+                camposVacios:
+                  value:
+                    msg: "Lo sentimos, debes llenar todos los campos"
+                usuarioInexistente:
+                  value:
+                    msg: "Usuario Inexistente"
+                contraseñaErronea:
+                  value:
+                    msg: "Contraseña erronea. Le quedan 2 intentos"
+                cuentaBloqueada:
+                  value:
+                    msg: "La Cuenta está bloqueada"
+
+  /api/login:
+    post:
+      tags:
+        - Autenticación
+      summary: Login de vendedor
+      description: >
+        Endpoint para autenticación de vendedores.
+        
+        **Notas importantes:**
+        * Límite de 5 intentos en 15 minutos
+        * Requiere confirmación de email previa
+        * El bloqueo es temporal y se libera automáticamente
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Login exitoso
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TokenResponse'
+        '400':
+          description: Error en credenciales
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+              examples:
+                datosIncompletos:
+                  value:
+                    msg: "Faltan datos por ingresar"
+                emailNoConfirmado:
+                  value:
+                    msg: "Lo sentimos primero debes confirmar tu email"
+                usuarioNoEncontrado:
+                  value:
+                    msg: "Usuario no encontrado"
+        '429':
+          description: Demasiados intentos
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "error"
+                  message:
+                    type: string
+                    example: "Demasiados intentos de inicio de sesión. Por favor, espere 15 minutos."
+                  nextValidRequest:
+                    type: string
+                    format: date-time
+
+  /api/verify-token:
+    get:
+      tags:
+        - Autenticación
+      summary: Verificar validez del token
+      description: Verifica si un token JWT es válido y no ha expirado
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: Token válido
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  valid:
+                    type: boolean
+                    example: true
+        '401':
+          description: Token inválido o expirado
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: "Token expirado o inválido"
+                  expired:
+                    type: boolean
+                    example: true
+
+  /api/recovery-password:
+    post:
+      tags:
+        - Autenticación
+      summary: Solicitar recuperación de contraseña
+      description: >
+        Envía un email con un enlace para recuperar la contraseña.
+        El enlace expira en 1 hora.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "usuario@prima-sa.com"
+      responses:
+        '200':
+          description: Email enviado exitosamente
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: "Se ha enviado un correo para recuperar la contraseña"

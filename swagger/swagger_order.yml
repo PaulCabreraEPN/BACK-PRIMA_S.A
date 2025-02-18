@@ -1,16 +1,94 @@
+# swagger/swagger_orders.yml
 components:
   schemas:
+    OrderProduct:
+      type: object
+      required:
+        - productId
+        - quantity
+      properties:
+        productId:
+          type: string
+          example: "1001"
+          description: "ID del producto"
+        quantity:
+          type: number
+          example: 5
+          description: "Cantidad solicitada"
+          minimum: 1
+
     Order:
       type: object
+      required:
+        - customer
+        - products
+        - discountApplied
+        - netTotal
+        - totalWithTax
       properties:
         customer:
           type: number
-          description: RUC del cliente
-          example: 1234567890
-        seller:
+          example: 1234567890001
+          description: "RUC del cliente (13 dígitos)"
+        products:
+          type: array
+          items:
+            $ref: '#/components/schemas/OrderProduct'
+          minItems: 1
+          description: "Lista de productos en la orden"
+        discountApplied:
+          type: number
+          example: 10
+          description: "Porcentaje de descuento aplicado"
+          minimum: 0
+          maximum: 100
+        netTotal:
+          type: number
+          example: 100.50
+          description: "Total antes de impuestos"
+          minimum: 0
+        totalWithTax:
+          type: number
+          example: 112.56
+          description: "Total incluyendo impuestos"
+          minimum: 0
+        status:
           type: string
-          description: ID del vendedor
-          example: "65f0e3b2c54a8c3b7c9d5678"
+          example: "Pendiente"
+          description: "Estado de la orden"
+          enum: ["Pendiente", "En proceso", "Enviado", "Cancelado"]
+          default: "Pendiente"
+        comment:
+          type: string
+          example: "Entrega urgente"
+          description: "Comentarios adicionales"
+          maxLength: 500
+
+    OrderResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65f0e3b2c54a8c3b7c9d1234"
+        customer:
+          type: object
+          properties:
+            _id:
+              type: string
+            Name:
+              type: string
+            Ruc:
+              type: number
+            Address:
+              type: string
+            telephone:
+              type: number
+            email:
+              type: string
+            credit:
+              type: string
+            state:
+              type: string
         products:
           type: array
           items:
@@ -18,35 +96,59 @@ components:
             properties:
               productId:
                 type: string
-                example: "1001"
               quantity:
                 type: number
-                example: 5
+              productDetails:
+                type: object
+                properties:
+                  _id:
+                    type: string
+                  product_name:
+                    type: string
+                  measure:
+                    type: string
+                  price:
+                    type: number
         discountApplied:
           type: number
-          example: 10
         netTotal:
           type: number
-          example: 100.50
         totalWithTax:
           type: number
-          example: 112.56
         status:
           type: string
-          enum: [Pending, Completed, Cancelled]
-          example: "Pending"
         comment:
           type: string
-          example: "Entrega urgente"
+        seller:
+          type: object
+          properties:
+            _id:
+              type: string
+            names:
+              type: string
+            lastNames:
+              type: string
+            email:
+              type: string
+            SalesCity:
+              type: string
 
 paths:
   /api/orders/create:
     post:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
       summary: Crear nueva orden
+      description: >
+        Crea una nueva orden y actualiza el inventario automáticamente.
+        
+        **Validaciones importantes:**
+        * El cliente debe existir y estar activo
+        * Los productos deben existir y tener stock suficiente
+        * El descuento debe estar entre 0% y 100%
+        * El total con impuestos debe ser mayor al total neto
+      security:
+        - bearerAuth: []
       requestBody:
         required: true
         content:
@@ -54,98 +156,119 @@ paths:
             schema:
               $ref: '#/components/schemas/Order'
       responses:
-        201:
+        '201':
           description: Orden creada exitosamente
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Orden creada con éxito"
+                properties:
+                  msg:
+                    type: string
+                    example: "Orden creada con éxito"
                   savedOrder:
-                    $ref: '#/components/schemas/Order'
-        400:
+                    $ref: '#/components/schemas/OrderResponse'
+        '400':
           description: Error en la creación
           content:
             application/json:
               schema:
                 type: object
-                examples:
-                  camposRequeridos:
-                    value:
-                      message: "Todos los campos son requeridos"
-                  stockInsuficiente:
-                    value:
-                      message: "Stock insuficiente para el producto 1001. Stock actual: 10, Cantidad solicitada: 15"
+                properties:
+                  message:
+                    type: string
+              examples:
+                camposRequeridos:
+                  value:
+                    message: "Todos los campos son requeridos"
+                stockInsuficiente:
+                  value:
+                    message: "Stock insuficiente para el producto 1001. Stock actual: 10, Cantidad solicitada: 15"
+                clienteInvalido:
+                  value:
+                    message: "Cliente no encontrado"
 
   /api/orders:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
-      summary: Obtener todas las órdenes
+      summary: Listar todas las órdenes
+      description: >
+        Obtiene todas las órdenes con detalles de cliente, productos y vendedor.
+        Los resultados incluyen información detallada de referencias.
+      security:
+        - bearerAuth: []
       responses:
-        200:
-          description: Lista de órdenes
+        '200':
+          description: Lista de órdenes obtenida exitosamente
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  $ref: '#/components/schemas/Order'
-        404:
+                  $ref: '#/components/schemas/OrderResponse'
+        '404':
           description: No hay órdenes
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "No se encontraron órdenes"
+                properties:
+                  message:
+                    type: string
+                    example: "No se encontraron órdenes"
 
   /api/orders/{id}:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
       summary: Obtener orden por ID
+      description: Obtiene los detalles completos de una orden específica
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB de la orden
           example: "65f0e3b2c54a8c3b7c9d5678"
       responses:
-        200:
+        '200':
           description: Orden encontrada
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/Order'
-        404:
+                $ref: '#/components/schemas/OrderResponse'
+        '404':
           description: Orden no encontrada
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "Orden no encontrada"
+                properties:
+                  message:
+                    type: string
+                    example: "Orden no encontrada"
 
   /api/orders/update/state/{id}:
     patch:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
       summary: Actualizar estado de orden
+      description: >
+        Actualiza solo el estado de una orden existente.
+        Registra automáticamente la fecha de actualización.
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB de la orden
           example: "65f0e3b2c54a8c3b7c9d5678"
       requestBody:
         required: true
@@ -153,42 +276,45 @@ paths:
           application/json:
             schema:
               type: object
+              required:
+                - status
               properties:
                 status:
                   type: string
-                  enum: [Pending, Completed, Cancelled]
-                  example: "Completed"
+                  enum: ["Pendiente", "En proceso", "Enviado", "Cancelado"]
+                  example: "En proceso"
       responses:
-        200:
-          description: Estado actualizado
+        '200':
+          description: Estado actualizado exitosamente
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Estado de la proforma actualizado correctamente"
-        404:
-          description: Orden no encontrada
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "No se encontró la proforma con el id especificado"
+                properties:
+                  msg:
+                    type: string
+                    example: "Estado de la proforma actualizado correctamente"
+                  data:
+                    $ref: '#/components/schemas/OrderResponse'
 
   /api/orders/update/{id}:
     put:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
       summary: Actualizar orden completa
+      description: >
+        Actualiza todos los campos de una orden.
+        Solo permite actualizar órdenes en estado "Pendiente".
+        Actualiza el inventario según los cambios realizados.
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB de la orden
           example: "65f0e3b2c54a8c3b7c9d5678"
       requestBody:
         required: true
@@ -197,51 +323,65 @@ paths:
             schema:
               $ref: '#/components/schemas/Order'
       responses:
-        200:
-          description: Orden actualizada
+        '200':
+          description: Orden actualizada exitosamente
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Orden actualizada con éxito"
-        400:
-          description: Error en actualización
+                properties:
+                  msg:
+                    type: string
+                    example: "Orden actualizada con éxito"
+                  updatedOrder:
+                    $ref: '#/components/schemas/OrderResponse'
+        '400':
+          description: Error en la actualización
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "El pedido ya no se puede actualizar"
+                properties:
+                  message:
+                    type: string
+                    example: "El pedido ya no se puede actualizar"
 
   /api/orders/delete/{id}:
     delete:
-      security:
-        - bearerAuth: []
       tags:
         - Órdenes
       summary: Eliminar orden
+      description: >
+        Elimina una orden y restaura el inventario.
+        Solo permite eliminar órdenes en estado "Pendiente".
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB de la orden
           example: "65f0e3b2c54a8c3b7c9d5678"
       responses:
-        200:
-          description: Orden eliminada
+        '200':
+          description: Orden eliminada exitosamente
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Orden eliminada con éxito y stock reestablecido"
-        400:
-          description: Error en eliminación
+                properties:
+                  msg:
+                    type: string
+                    example: "Orden eliminada con éxito y stock reestablecido"
+        '400':
+          description: Error en la eliminación
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "Lo sentimos, la orden ya fué procesada"
+                properties:
+                  message:
+                    type: string
+                    example: "Lo sentimos, la orden ya fué procesada"

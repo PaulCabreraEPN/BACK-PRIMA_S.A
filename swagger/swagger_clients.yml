@@ -1,48 +1,96 @@
+# swagger/swagger_clients.yml
 components:
   schemas:
     Client:
       type: object
+      required:
+        - Name
+        - Ruc
+        - Address
+        - telephone
+        - email
+        - credit
+        - state
       properties:
         Name:
           type: string
           example: "Ferretería El Constructor"
-          description: Nombre del cliente o empresa
+          description: "Nombre del cliente o empresa"
+          minLength: 3
+          maxLength: 100
         Ruc:
           type: number
           example: 1234567890001
-          description: RUC del cliente
+          description: "RUC (13 dígitos)"
+          minimum: 1000000000001
+          maximum: 9999999999999
         Address:
           type: string
           example: "Av. Principal 123 y Secundaria"
-          description: Dirección del cliente
+          description: "Dirección física completa"
+          minLength: 10
+          maxLength: 200
         telephone:
           type: number
-          example: 0987654321
-          description: Teléfono de contacto
+          example: 593987654321
+          description: "Teléfono de contacto (formato Ecuador)"
         email:
           type: string
+          format: email
           example: "contacto@ferreteria.com"
-          description: Correo electrónico
+          description: "Correo electrónico principal"
         credit:
           type: string
           example: "A"
-          description: Categoría de crédito
+          description: "Categoría de crédito del cliente"
+          enum: ["A", "B", "C"]
         state:
           type: string
           example: "Activo"
-          description: Estado del cliente
+          description: "Estado del cliente en el sistema"
+          enum: ["Activo", "Inactivo", "Suspendido"]
+
+    ClientResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65f0e3b2c54a8c3b7c9d1234"
+        Name:
+          type: string
+          example: "Ferretería El Constructor"
+        Ruc:
+          type: number
+          example: 1234567890001
+        Address:
+          type: string
+          example: "Av. Principal 123 y Secundaria"
+        telephone:
+          type: number
+          example: 593987654321
+        email:
+          type: string
+          example: "contacto@ferreteria.com"
+        credit:
+          type: string
+          example: "A"
+        state:
+          type: string
+          example: "Activo"
 
 paths:
   /api/clients:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Clientes
-      summary: Obtener todos los clientes
-      description: Retorna lista de todos los clientes registrados
+      summary: Listar todos los clientes
+      description: >
+        Obtiene la lista completa de clientes registrados.
+        Se excluye el campo _id de MongoDB.
+      security:
+        - bearerAuth: []
       responses:
-        200:
+        '200':
           description: Lista de clientes obtenida exitosamente
           content:
             application/json:
@@ -50,42 +98,40 @@ paths:
                 type: array
                 items:
                   $ref: '#/components/schemas/Client'
-              example:
-                - Name: "Ferretería El Constructor"
-                  Ruc: 1234567890001
-                  Address: "Av. Principal 123 y Secundaria"
-                  telephone: 0987654321
-                  email: "contacto@ferreteria.com"
-                  credit: "A"
-                  state: "Activo"
-        500:
-          description: Error del servidor
+        '500':
+          description: Error al obtener los clientes
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  message: "Error al obtener los clientes"
-                  error: "Error interno del servidor"
+                properties:
+                  message:
+                    type: string
+                    example: "Error al obtener los clientes"
+                  error:
+                    type: string
+                    example: "Error interno del servidor"
 
   /api/clients/{ruc}:
     get:
-      security:
-        - bearerAuth: []
       tags:
         - Clientes
       summary: Obtener cliente por RUC
-      description: Retorna la información de un cliente específico por su RUC
+      description: >
+        Busca un cliente específico por su número de RUC.
+        El RUC debe ser un número válido de 13 dígitos.
+      security:
+        - bearerAuth: []
       parameters:
         - in: path
           name: ruc
           required: true
-          description: RUC del cliente
           schema:
             type: string
+          description: RUC del cliente (13 dígitos)
           example: "1234567890001"
       responses:
-        200:
+        '200':
           description: Cliente encontrado
           content:
             application/json:
@@ -93,44 +139,34 @@ paths:
                 type: object
                 properties:
                   data:
-                    $ref: '#/components/schemas/Client'
-              example:
-                data:
-                  _id: "65f0e3b2c54a8c3b7c9d1234"
-                  name: "Ferretería El Constructor"
-                  ruc: 1234567890001
-                  address: "Av. Principal 123 y Secundaria"
-                  telephone: 0987654321
-                  email: "contacto@ferreteria.com"
-                  credit: "A"
-                  state: "Activo"
-        400:
+                    $ref: '#/components/schemas/ClientResponse'
+        '400':
           description: RUC inválido
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Por favor, ingrese un RUC válido"
-        404:
+                properties:
+                  msg:
+                    type: string
+                    example: "Por favor, ingrese un RUC válido"
+        '404':
           description: Cliente no encontrado
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Cliente no encontrado"
-        500:
+                properties:
+                  msg:
+                    type: string
+                    example: "Cliente no encontrado"
+        '500':
           description: Error del servidor
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Error al buscar el cliente"
-
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+                properties:
+                  msg:
+                    type: string
+                    example: "Error al buscar el cliente"

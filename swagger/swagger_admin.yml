@@ -22,10 +22,69 @@ components:
           type: string
           format: date-time
           example: "2024-03-15T10:30:00Z"
-
     Seller:
       type: object
+      required:
+        - names
+        - lastNames
+        - numberID
+        - email
+        - SalesCity
+        - PhoneNumber
+        - role
       properties:
+        names:
+          type: string
+          example: "Juan Carlos"
+          description: "Dos nombres del vendedor"
+          minLength: 3
+          maxLength: 50
+        lastNames:
+          type: string
+          example: "Pérez García"
+          description: "Dos apellidos del vendedor"
+          minLength: 3
+          maxLength: 50
+        numberID:
+          type: number
+          example: 1234567890
+          description: "Cédula ecuatoriana (10 dígitos)"
+        email:
+          type: string
+          format: email
+          example: "juan.perez@prima-sa.com"
+          description: "Correo electrónico corporativo"
+        username:
+          type: string
+          example: "JC@rlos1234"
+          description: "Generado automáticamente por el sistema"
+          readOnly: true
+        SalesCity:
+          type: string
+          example: "Quito"
+          description: "Ciudad donde opera el vendedor"
+          enum: ["Quito", "Guayaquil", "Cuenca", "Manta", "Ambato"]
+        PhoneNumber:
+          type: number
+          example: 593987654321
+          description: "Número de teléfono ecuatoriano"
+        role:
+          type: string
+          example: "Seller"
+          enum: ["Seller"]
+          description: "Rol del usuario (siempre 'Seller')"
+        status:
+          type: boolean
+          example: true
+          description: "Estado de la cuenta"
+          default: true
+
+    SellerResponse:
+      type: object
+      properties:
+        _id:
+          type: string
+          example: "65f0e3b2c54a8c3b7c9d5678"
         names:
           type: string
           example: "Juan Carlos"
@@ -37,117 +96,39 @@ components:
           example: 1234567890
         email:
           type: string
-          example: "juan.perez@empresa.com"
+          example: "juan.perez@prima-sa.com"
         username:
           type: string
-          example: "jperez2024"
+          example: "JC@rlos1234"
+        PhoneNumber:
+          type: number
+          example: 593987654321
         SalesCity:
           type: string
           example: "Quito"
-        PhoneNumber:
-          type: number
-          example: 0987654321
         role:
           type: string
-          example: "seller"
+          example: "Seller"
         status:
           type: boolean
           example: true
 
 paths:
-  /api/login-admin:
-    post:
-      tags:
-        - Administrador
-      summary: Login de administrador
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                  example: "admin2024"
-                password:
-                  type: string
-                  example: "Admin123*"
-      responses:
-        200:
-          description: Login exitoso
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Inicio de sesion exitoso"
-                  inf:
-                    _id: "65f0e3b2c54a8c3b7c9d1234"
-                    username: "admin2024"
-                    role: "admin"
-                    createdAt: "2024-03-12T15:30:00Z"
-                  tokenJWT: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-        400:
-          description: Error en credenciales
-          content:
-            application/json:
-              schema:
-                type: object
-                examples:
-                  camposVacios:
-                    value:
-                      msg: "Lo sentimos, debes llenar todos los campos"
-                  usuarioInexistente:
-                    value:
-                      msg: "Usuario Inexistente"
-                  contraseñaErronea:
-                    value:
-                      msg: "Contraseña erronea. Le quedan 2 intentos"
-                  cuentaBloqueada:
-                    value:
-                      msg: "La Cuenta está bloqueada"
-
-  /api/recovery-password-admin:
-    post:
-      tags:
-        - Administrador
-      summary: Recuperar contraseña de administrador
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                username:
-                  type: string
-                  example: "admin2024"
-      responses:
-        200:
-          description: Recuperación exitosa
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Nueva Contraseña generada, REVISA EL CORREO DE LA EMPRESA"
-        400:
-          description: Error en la recuperación
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Lo sentimos, debes llenar todos los campos"
-
   /api/register:
     post:
+      tags:
+        - Administradores
+      summary: Registrar nuevo vendedor
+      description: >
+        Crea un nuevo vendedor en el sistema.
+        
+        **Notas importantes:**
+        * El username se genera automáticamente
+        * Se envía un email con credenciales al vendedor
+        * El email debe ser confirmado antes de poder iniciar sesión
+        * La cédula debe ser válida según el algoritmo ecuatoriano
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Registrar nuevo vendedor
       requestBody:
         required: true
         content:
@@ -155,220 +136,149 @@ paths:
             schema:
               $ref: '#/components/schemas/Seller'
       responses:
-        201:
-          description: Registro exitoso
+        '201':
+          description: Vendedor registrado exitosamente
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Vendedor registrado exitosamente"
-        400:
+                properties:
+                  msg:
+                    type: string
+                    example: "Vendedor registrado exitosamente"
+        '400':
           description: Error en el registro
           content:
             application/json:
               schema:
                 type: object
-                examples:
-                  camposVacios:
-                    value:
-                      msg: "Lo sentimos, debes llenar todos los campos"
-                  emailExistente:
-                    value:
-                      msg: "Ya se encuentra registrado el email"
-                  cedulaExistente:
-                    value:
-                      msg: "Número de cédula ya se encuentra registrado"
+                properties:
+                  msg:
+                    type: string
+              examples:
+                camposVacios:
+                  value:
+                    msg: "Lo sentimos, debes llenar todos los campos"
+                emailRepetido:
+                  value:
+                    msg: "Ya se encuentra registrado el email"
+                cedulaRepetida:
+                  value:
+                    msg: "Número de cédula ya se encuentra registrado"
+                cedulaInvalida:
+                  value:
+                    msg: "Cédula ecuatoriana inválida"
 
   /api/sellers:
     get:
+      tags:
+        - Administradores
+      summary: Listar todos los vendedores
+      description: Obtiene la lista de todos los vendedores registrados
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Listar todos los vendedores
       responses:
-        200:
-          description: Lista de vendedores
+        '200':
+          description: Lista de vendedores obtenida exitosamente
           content:
             application/json:
               schema:
                 type: array
                 items:
-                  type: object
-                  example:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    name: "Juan Carlos"
-                    lastNames: "Pérez García"
-                    numberID: 1234567890
-                    email: "juan.perez@empresa.com"
-                    username: "jperez2024"
-                    PhoneNumber: 0987654321
-                    SalesCity: "Quito"
-                    role: "seller"
-        500:
-          description: Error del servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  message: "Error al obtener los vendedores"
-                  error: "Error interno del servidor"
+                  $ref: '#/components/schemas/SellerResponse'
 
   /api/sellers/{id}:
     get:
+      tags:
+        - Administradores
+      summary: Buscar vendedor por ID
+      description: Obtiene los detalles de un vendedor específico por su ID
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Buscar vendedor por ID
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB del vendedor
           example: "65f0e3b2c54a8c3b7c9d5678"
       responses:
-        200:
+        '200':
           description: Vendedor encontrado
           content:
             application/json:
               schema:
                 type: object
-                example:
+                properties:
                   msg:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    name: "Juan Carlos"
-                    lastNames: "Pérez García"
-                    numberID: 1234567890
-                    email: "juan.perez@empresa.com"
-                    username: "jperez2024"
-                    PhoneNumber: 0987654321
-                    SalesCity: "Quito"
-                    role: "seller"
-        404:
+                    $ref: '#/components/schemas/SellerResponse'
+        '404':
           description: Vendedor no encontrado
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Lo sentimos, no existe el vendedor con el id proporcionado"
+                properties:
+                  msg:
+                    type: string
+                    example: "Lo sentimos, no existe el vendedor con el id proporcionado"
 
-  /api/sellers-numberid:
+  /api/sellers-numberid/{numberID}:
     get:
+      tags:
+        - Administradores
+      summary: Buscar vendedor por cédula
+      description: Obtiene los detalles de un vendedor por su número de cédula
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Buscar vendedor por cédula
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              properties:
-                numberID:
-                  type: number
-                  example: 1234567890
+      parameters:
+        - in: path
+          name: numberID
+          required: true
+          schema:
+            type: string
+          description: Número de cédula ecuatoriana (10 dígitos)
+          example: "1234567890"
       responses:
-        200:
+        '200':
           description: Vendedor encontrado
           content:
             application/json:
               schema:
                 type: object
-                example:
+                properties:
                   msg:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    name: "Juan Carlos"
-                    lastNames: "Pérez García"
-                    numberID: 1234567890
-                    email: "juan.perez@empresa.com"
-                    username: "jperez2024"
-                    PhoneNumber: 0987654321
-                    SalesCity: "Quito"
-                    role: "seller"
-        400:
+                    $ref: '#/components/schemas/SellerResponse'
+        '400':
           description: Error en la búsqueda
           content:
             application/json:
               schema:
                 type: object
-                examples:
-                  cedulaVacia:
-                    value:
-                      msg: "Lo sentimos, debes propocionar la cédula del vendedor"
-                  formatoInvalido:
-                    value:
-                      msg: "Lo sentimos, formato de cédula invalido"
+                properties:
+                  msg:
+                    type: string
+                    example: "Lo sentimos, formato de cédula inválido"
 
   /api/updateSeller/{id}:
     patch:
-      security:
-        - bearerAuth: []
       tags:
-        - Administrador
+        - Administradores
       summary: Actualizar datos parciales del vendedor
-      parameters:
-        - in: path
-          name: id
-          required: true
-          schema:
-            type: string
-          example: "65f0e3b2c54a8c3b7c9d5678"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-              example:
-                email: "nuevo.email@empresa.com"
-                PhoneNumber: 0987654321
-                SalesCity: "Guayaquil"
-      responses:
-        200:
-          description: Actualización exitosa
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Vendedor actualizado correctamente"
-                  data:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    email: "nuevo.email@empresa.com"
-                    PhoneNumber: 0987654321
-                    SalesCity: "Guayaquil"
-        400:
-          description: Error en la actualización
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "No se proporcionaron campos válidos para actualizar"
-
-  /api/updateAllSellerinfo/{id}:
-    put:
+      description: >
+        Actualiza uno o más campos del vendedor.
+        Solo se pueden actualizar: email, PhoneNumber, SalesCity, status
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Actualizar todos los datos del vendedor
-      description: Actualiza completamente la información de un vendedor incluyendo contraseña
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB del vendedor
           example: "65f0e3b2c54a8c3b7c9d5678"
-          description: ID del vendedor a actualizar
       requestBody:
         required: true
         content:
@@ -378,105 +288,98 @@ paths:
               properties:
                 email:
                   type: string
-                  example: "vendedor.nuevo@empresa.com"
+                  format: email
+                  example: "nuevo.email@prima-sa.com"
                 PhoneNumber:
                   type: number
-                  example: 0987654321
+                  example: 593987654321
                 SalesCity:
                   type: string
                   example: "Guayaquil"
-                password:
-                  type: string
-                  example: "NuevaContraseña123*"
-              required:
-                - email
-                - PhoneNumber
-                - SalesCity
-                - password
+                status:
+                  type: boolean
+                  example: true
       responses:
-        200:
+        '200':
           description: Actualización exitosa
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Vendedor actualizado correctamente"
+                properties:
+                  msg:
+                    type: string
+                    example: "Vendedor actualizado correctamente"
                   data:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    email: "vendedor.nuevo@empresa.com"
-                    PhoneNumber: 0987654321
-                    SalesCity: "Guayaquil"
-                  password: "No se puede mostrar la contraseña por seguridad"
-        400:
-          description: Error en la actualización
-          content:
-            application/json:
-              schema:
-                type: object
-                examples:
-                  camposVacios:
-                    value:
-                      error: "Datos vacíos. Por favor, llene todos los campos."
-                  idInvalido:
-                    value:
-                      msg: "Lo sentimos, no existe el vendedor con el id proporcionado ingrese un id valido para actualizar"
-        404:
-          description: Vendedor no encontrado
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "No se encontró el vendedor con el id proporcionado"
-        500:
-          description: Error del servidor
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Error interno del servidor"
-                  error: "Detalles del error"
+                    $ref: '#/components/schemas/SellerResponse'
 
-  /api/deleteSellerinfo/{id}:
-    delete:
+  /api/updateAllSellerinfo/{id}:
+    put:
+      tags:
+        - Administradores
+      summary: Actualizar vendedor completo
+      description: >
+        Actualiza todos los campos del vendedor.
+        Se generará una nueva contraseña automáticamente.
       security:
         - bearerAuth: []
-      tags:
-        - Administrador
-      summary: Eliminar vendedor
       parameters:
         - in: path
           name: id
           required: true
           schema:
             type: string
+          description: ID de MongoDB del vendedor
+          example: "65f0e3b2c54a8c3b7c9d5678"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Seller'
+      responses:
+        '200':
+          description: Actualización exitosa
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  msg:
+                    type: string
+                    example: "Vendedor actualizado correctamente"
+                  data:
+                    $ref: '#/components/schemas/SellerResponse'
+                  password:
+                    type: string
+                    example: "No se puede mostrar la contraseña por seguridad"
+
+  /api/deleteSellerinfo/{id}:
+    delete:
+      tags:
+        - Administradores
+      summary: Eliminar vendedor
+      description: Elimina permanentemente un vendedor del sistema
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+          description: ID de MongoDB del vendedor
           example: "65f0e3b2c54a8c3b7c9d5678"
       responses:
-        200:
+        '200':
           description: Eliminación exitosa
           content:
             application/json:
               schema:
                 type: object
-                example:
-                  msg: "Vendedor eliminado correctamente"
+                properties:
+                  msg:
+                    type: string
+                    example: "Vendedor eliminado correctamente"
                   data:
-                    _id: "65f0e3b2c54a8c3b7c9d5678"
-                    name: "Juan Carlos"
-                    lastNames: "Pérez García"
-        404:
-          description: Error en la eliminación
-          content:
-            application/json:
-              schema:
-                type: object
-                example:
-                  msg: "Lo sentimos, no existe el vendedor con el id proporcionado"
-
-  securitySchemes:
-    bearerAuth:
-      type: http
-      scheme: bearer
-      bearerFormat: JWT
+                    $ref: '#/components/schemas/SellerResponse'
