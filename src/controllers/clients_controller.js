@@ -1,5 +1,26 @@
 import Clients from '../models/clients.js';
-import mongoose from 'mongoose';
+
+const RegisterClient = async (req,res) => {
+    try {
+        const {Ruc,email} = req.body;
+    
+        const verifyClient = await Clients.findOne({Ruc:Ruc});
+    
+        if(verifyClient){return res.status(400).json({message:"El cliente ya existe"})}
+    
+        const verifyEmail = await Clients.findOne({email:email,});
+    
+        if(verifyEmail){return res.status(400).json({message:"El email ya existe"})}
+    
+        const newClient = new Clients(req.body);
+        await newClient.save()
+        res.status(201).json({message:"Cliente registrado con éxito"});
+        
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({message:"Error al registrar el cliente",error:error.message})
+    }
+}
 
 const getAllClients = async (req, res) => {
     try {
@@ -49,9 +70,56 @@ const getClientsById = async (req, res) => {
             msg: "Error al buscar el cliente",
         });
     }
-};
+}
+
+const UpdateClient = async (req,res) => {
+    try {
+        const {ruc} = req.params;
+        const updatedData = req.body;
+        // Obtener los atributos válidos del modelo
+        const validFields = ['Name', 'Address', 'telephone', 'email', 'credit', 'state'];
+        const filteredUpdates = {};
+        const verifyEmail = await Clients.findOne({email:updatedData.email,});
+        if(verifyEmail){return res.status(400).json({message:"El email ya existe"});}
+        // Filtrar los campos válidos para la actualización
+        for (const key in updatedData) {
+            if (validFields.includes(key)) {
+                filteredUpdates[key] = updatedData[key];
+            }
+        }
+
+        // Validar si hay campos válidos para actualizar
+        if (Object.keys(filteredUpdates).length === 0) {
+            return res.status(400).json({ msg: "No se proporcionaron campos válidos para actualizar" });
+        }
+
+        // Actualizar el cliente
+        await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates,{new:true});
+        res.status(200).json({ msg: "Cliente actualizado correctamente", data: filteredUpdates });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error al actualizar el cliente", error: error.message });
+    }
+}
+
+const DeleteClient = async (req,res) => {
+    const {id} = req.params;
+    try {
+        const deletedClient = await Clients.findByIdAndDelete(id);
+        if(!deletedClient){return res.status(404).json({message:"Cliente no encontrado"})}
+        res.status(200).json({message:"Cliente eliminado con éxito"});
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({message:"Error al eliminar el cliente",error:error.message})
+    }
+}
+
+
 
 export {
+    RegisterClient,
     getAllClients,
-    getClientsById
+    getClientsById,
+    UpdateClient,
+    DeleteClient
 }

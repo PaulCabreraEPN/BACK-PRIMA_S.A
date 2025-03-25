@@ -15,7 +15,7 @@ const getAllCount = async (req, res) => {
             orders: ordersCount,
             sellers: sellersCount,
             clients: clientsCount
-         });
+        });
 
     } catch (error) {
         res.status(500).json({ message: "Error al obtener el conteo de productos", error: error.message });
