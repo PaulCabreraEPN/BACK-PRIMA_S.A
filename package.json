@@ -4,14 +4,14 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "vitest",
+    "test": "jest",
     "start": "nodemon src/index.js",
     "dev": "node --watch src/index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "MTDEV2312",
   "license": "ISC",
-  "description": "",
+  "description": "API RESTful para la gestión de ventas, inventario y relaciones con clientes de PRIMA S.A.",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cloudinary": "^2.6.0",
@@ -27,16 +27,7 @@
     "swagger-ui-express": "^5.0.1"
   },
   "devDependencies": {
-    "supertest": "^7.0.0",
-    "vitest": "^3.0.9"
-  },
-  "vitest": {
-    "include": [
-      "tests/**/*.test.js"
-    ],
-    "exclude": [
-      "node_modules/**",
-      "dist/**"
-    ]
+    "jest": "^29.7.0",
+    "supertest": "^7.0.0"
   }
 }
