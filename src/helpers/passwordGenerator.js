@@ -1,28 +1,21 @@
-const passwordGenerator = (length = 8) => {
-    const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789!@#$%&*()"
-    let password = ""
+import crypto from 'crypto';
+
+const passwordGenerator = (length = 12) => {
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()';
+    let password = '';
 
     for (let i = 0; i < length; i++) {
-        const randomIndex = Math.floor(Math.random() * charset.length);
+        const randomIndex = crypto.randomInt(0, charset.length);
         password += charset[randomIndex];
     }
 
-    return password
-}
-
-const passwordGeneratorbyAdmin = ()  => {
-    const characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-    let password = '';
-
-    for (let i = 0; i < 8; i++) {
-        const randomIndex = Math.floor(Math.random() * characters.length);
-        password += characters[randomIndex];
-    }
-
     return password;
-} 
+};
+
+// Alias para mantener compatibilidad con `passwordGeneratorbyAdmin`
+const passwordGeneratorbyAdmin = () => passwordGenerator();
 
 export {
     passwordGenerator,
     passwordGeneratorbyAdmin
-} 
+};
