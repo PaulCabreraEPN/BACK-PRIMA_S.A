@@ -76,6 +76,10 @@ const UpdateClient = async (req,res) => {
     try {
         const {ruc} = req.params;
         const updatedData = req.body;
+
+        // Validar el RUC
+
+
         // Obtener los atributos válidos del modelo
         const validFields = ['Name', 'Address', 'telephone', 'email', 'credit', 'state'];
         const filteredUpdates = {};
@@ -94,7 +98,10 @@ const UpdateClient = async (req,res) => {
         }
 
         // Actualizar el cliente
-        await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates,{new:true});
+        const clientToUpdate = await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates,{new:true});
+        if(!clientToUpdate) {
+            return res.status(404).json({ msg: "Cliente no encontrado" });
+        }
         res.status(200).json({ msg: "Cliente actualizado correctamente", data: filteredUpdates });
     } catch (error) {
         console.error(error);
