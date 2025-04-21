@@ -1,148 +1,440 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
-import request from 'supertest';
-import express from 'express';
-import adminRouter from '../src/routers/admin_routes.js';
-import { login_admin, recovery_pass_admin } from '../src/controllers/admin_controller.js';
-import admins from '../src/models/admins.js';
+import testServer from '../src/utils/testServer.js'
+import admin from '../src/routers/admin_routes.js'
+import { connectDB, disconnectDB } from '../src/config/database.js'
+import dotenv from 'dotenv'
 
-// Mock completo del modelo
-vi.mock('../src/models/admins.js', () => ({
-  default: {
-    findOne: vi.fn()
-  }
-}));
+// Cargar variables de entorno
+dotenv.config()
+beforeAll(async () => {
+    await connectDB()
+})
 
-const app = express();
-app.use(express.json());
-app.use('/api', adminRouter);
+afterAll(async () => {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    await disconnectDB()
+})
 
-describe('Admin Routes', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+const request = testServer(admin)
 
-  it('should login an admin successfully', async () => {
-    const mockAdmin = {
-      _id: 'mock-id',
-      username: 'admin',
-      role: 'admin',
-      status: true,
-      chances: 3,
-      createdAt: new Date(),
-      matchPassword: vi.fn().mockResolvedValue(true),
-      save: vi.fn().mockResolvedValue(true)
-    };
+describe('[Admin Login / Routes]', ()=>{
+    it('Should return 200 on successful login', async () => {
+        // Arrange
+        const expected = 200
+        
+        // Act
+        const response = await request
+            .post('/login-admin')
+            .send({
+                username: process.env.ADMIN_USER,
+                password: process.env.ADMIN_PASSWORD
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-    admins.findOne.mockResolvedValue(mockAdmin);
+    it('Should return 400 on invalid login', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/login-admin')
+            .send({
+                username: process.env.ADMIN_USER,
+                password: 'wrong_password'
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-    const response = await request(app)
-      .post('/api/login-admin')
-      .send({
-        username: 'admin',
-        password: 'password'
-      });
+    it('Should return 400 on empty fields', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/login-admin')
+            .send({
+                username: '',
+                password: ''
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-    expect(response.status).toBe(200);
-    expect(response.body).toHaveProperty('tokenJWT');
-    expect(response.body).toHaveProperty('inf');
-    expect(response.body.inf).toHaveProperty('username', 'admin');
-  });
+    it('Should return 400 on non-existent user', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/login-admin')
+            .send({
+                username: 'nonexistent_user',
+                password: 'any_password'
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-  it('should handle invalid login credentials', async () => {
-    const mockAdmin = {
-      username: 'admin',
-      status: true,
-      chances: 3,
-      matchPassword: vi.fn().mockResolvedValue(false),
-      save: vi.fn().mockResolvedValue(true)
-    };
+    it('Should return 400 on blocked account', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/login-admin')
+            .send({
+                username: 'blocked_user',
+                password: 'any_password'
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-    admins.findOne.mockResolvedValue(mockAdmin);
+    it('Should return 200 on successful password recovery', async () => {
+        //Arrange
+        const expected = 200
+        // Act
+        const response = await request
+            .post('/recovery-password-admin')
+            .send({
+                username: process.env.ADMIN_USERNAME_RECOVERY
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+        await new Promise(resolve => setTimeout(resolve, 1000))
+    },100000)
 
-    const response = await request(app)
-      .post('/api/login-admin')
-      .send({
-        username: 'admin',
-        password: 'wrongpassword'
-      });
+    it('Should return 400 on empty username field', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/recovery-password-admin')
+            .send({
+                username: ''
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
 
-    expect(response.status).toBe(400);
-    expect(response.body).toHaveProperty('msg');
-  });
-});
 
-describe('Admin Controllers', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
+})
 
-  it('should handle admin login successfully', async () => {
-    const req = {
-      body: {
-        username: 'admin',
-        password: 'password'
-      }
-    };
-    
-    const res = {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn()
-    };
+let ADMIN_TOKEN
+let SellerID
 
-    const mockAdmin = {
-      _id: 'mock-id',
-      username: 'admin',
-      role: 'admin',
-      status: true,
-      chances: 3,
-      createdAt: new Date(),
-      lastLogin: new Date(),
-      matchPassword: vi.fn().mockResolvedValue(true),
-      save: vi.fn().mockResolvedValue(true)
-    };
-
-    admins.findOne.mockResolvedValue(mockAdmin);
-
-    await login_admin(req, res);
-
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith(
-      expect.objectContaining({
-        tokenJWT: expect.any(String),
-        inf: expect.objectContaining({
-          _id: expect.any(String),
-          username: expect.any(String),
-          role: expect.any(String)
+beforeAll(async () => {
+    const response = await request
+        .post('/login-admin')
+        .send({
+            username: process.env.ADMIN_USER,
+            password: process.env.ADMIN_PASSWORD
         })
-      })
-    );
-  });
+    ADMIN_TOKEN = response.body.tokenJWT
+})
 
-  it('should handle password recovery successfully', async () => {
-    const req = {
-      body: { username: 'admin' }
-    };
-    
-    const res = {
-      status: vi.fn().mockReturnThis(),
-      json: vi.fn()
-    };
+afterAll(async () => {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    ADMIN_TOKEN = null
+    SellerID = null
+})
 
-    const mockAdmin = {
-      username: 'admin',
-      encryptPassword: vi.fn().mockResolvedValue('hashedpassword'),
-      save: vi.fn().mockResolvedValue(true)
-    };
+describe('[Seller Registration / Routes]', () => {
+    it('Should return 200 on successful registration', async () => {
+        // Arrange
+        const expected = 201
+        // Act
+        
+        const response = await request
+            .post('/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "Carlos Alberto",
+                "lastNames": "González Suarez",
+                "numberID": 1713175873,
+                "email": "xiditi6286@insfou.com",
+                "SalesCity": "Barcelona",
+                "PhoneNumber": 593987654321,
+                "role": "Seller",
+                "status": false
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on empty fields', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .post('/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "",
+                "lastNames": "",
+                "numberID": "",
+                "email": "",
+                "SalesCity": "",
+                "PhoneNumber": "",
+                "role": "",
+                "status": ""
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on exist email',async () =>{
+        // Arrange
+        const expected = 400
+        // Act
+        const response = await request
+            .post('/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "Carlos Alberto",
+                "lastNames": "González Suarez",
+                "numberID": 1713175873,
+                "email": "xiditi6286@insfou.com",
+                "SalesCity": "Barcelona",
+                "PhoneNumber": 593987654321,
+                "role": "Seller",
+                "status": false
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on exist numberID',async () =>{
+        // Arrange
+        const expected = 400
+        // Act
+        const response = await request
+            .post('/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "Carlos Alberto",
+                "lastNames": "González Suarez",
+                "numberID": 1713175873,
+                "email": "xiditi6286@insfou.com",
+                "SalesCity": "Barcelona",
+                "PhoneNumber": 593987654321,
+                "role": "Seller",
+                "status": false
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-    admins.findOne.mockResolvedValue(mockAdmin);
+describe('[Seller Search / Routes]',() => {
+    it('Should return 200 on successful search all Sellers', async () => {
+        // Arrange
+        const expected = 200
+        
+        // Act
+        const response = await request
+            .get('/sellers/')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 200 on successful search by number ID', async () => {
+        // Arrange
+        const expected = 200
+        
+        // Act
+        const response = await request
+            .get('/sellers-numberid/1713175873')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        SellerID = response.body.msg._id
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on empty number ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .get('/sellers-numberid/2')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on invalid number ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .get('/sellers-numberid/171317587')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 404 on non-existent number ID', async () => {
+        // Arrange
+        const expected = 404
+        
+        // Act
+        const response = await request
+            .get('/sellers-numberid/0926145335')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 200 on successful search by ID', async () => {
+        // Arrange
+        const expected = 200
+        
+        // Act
+        const response = await request
+            .get('/sellers/67c72d19c13895987c94c478')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 404 on empty ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .get('/sellers/2')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 404 on non-existent ID', async () => {
+        // Arrange
+        const expected = 404
+        
+        // Act
+        const response = await request
+            .get('/sellers/6805787f420062e52b0aa675')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-    await recovery_pass_admin(req, res);
+describe('[Seller Update / Routes]',() => {
+    it('Should return 200 on successful update', async () =>{
+        // Arange
+        const expected = 200
+        // Act
+        const response = await request
+            .patch('/updateSeller/67c72d19c13895987c94c478')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "Diaz Ariel"
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on empty fields', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .patch('/updateSeller/67c72d19c13895987c94c478')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "",
+                "lastNames": "",
+                "numberID": "",
+                "email": "",
+                "SalesCity": "",
+                "PhoneNumber": "",
+                "role": "",
+                "status": ""
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on invalid ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .patch('/updateSeller/67c72d19c13895987c9479')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "names": "Diaz Ariel"
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-    expect(res.status).toHaveBeenCalledWith(200);
-    expect(res.json).toHaveBeenCalledWith({
-      msg: 'Nueva Contraseña generada, REVISA EL CORREO DE LA EMPRESA'
-    });
-  });
+describe('[Seller Deletion / Routes]',() => {
+    it('Should return 200 on successful deletion', async () => {
+        // Arrange
+        const expected = 200
+        
+        // Act
+        const response = await request
+            .delete(`/deleteSellerinfo/${SellerID}`)
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on empty ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .delete('/deleteSellerinfo/2')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 404 on non-existent ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .delete('/deleteSellerinfo/4')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on invalid ID', async () => {
+        // Arrange
+        const expected = 400
+        
+        // Act
+        const response = await request
+            .delete('/deleteSellerinfo/67c72d19c13895987c9479')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-  
-});
