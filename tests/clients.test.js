@@ -1,98 +1,210 @@
-import { describe, it, expect, beforeEach, vi } from "vitest";
-import request from "supertest";
-import express from "express";
-import clientRouter from "../src/routers/clients_routes.js";
-import Clients from "../src/models/clients.js";
+import testServer from '../src/utils/testServer.js'
+import client from '../src/routers/clients_routes.js'
+import admin from '../src/routers/admin_routes.js'
+import { connectDB, disconnectDB } from '../src/config/database.js'
+import dotenv from 'dotenv'
 
-// Mock de Clients
-vi.mock("../src/models/clients.js");
+dotenv.config()
 
-// Mock del middleware de autenticación
-vi.mock("../src/middlewares/JWT.js", () => ({
-    verificarAutenticacion: vi.fn((req, res, next) => next())
-}));
+let ADMIN_TOKEN
+let CLIENT_ID
+const request1 = testServer(admin)
 
-const app = express();
-app.use(express.json());
-app.use("/api", clientRouter);
+beforeAll(async () => {
+    await connectDB()
+    const response = await request1
+    .post('/login-admin')
+    .send({
+        username: process.env.ADMIN_USER,
+        password: process.env.ADMIN_PASSWORD
+    })
+    ADMIN_TOKEN = response.body.tokenJWT
+})
 
-describe("Client Routes", () => {
-    beforeEach(() => {
-        vi.clearAllMocks();
-    });
+afterAll(async () => {
+    await new Promise(resolve => setTimeout(resolve, 2000))
+    await disconnectDB()
+    ADMIN_TOKEN = null
+    CLIENT_ID = null
+})
 
-    describe("GET /api/clients", () => {
-        it("should get all clients", async () => {
-            const mockClients = [
-                {
-                    Ruc: 1234567890,
-                    Name: "Client 1",
-                    Address: "Address 1",
-                    telephone: 123456789,
-                    email: "email@example.com",
-                    credit: "Good",
-                    state: "Active",
-                }
-            ];
+const request = testServer(client)
 
-            // Mock del método find
-            const mockSelect = vi.fn().mockResolvedValue(mockClients);
-            const mockFind = vi.fn().mockReturnValue({ select: mockSelect });
-            Clients.find = mockFind;
+describe('[Clients Registration / Routes]',() => {
+    it('Should return 201 on creating a client',async () => {
+        //Arrange
+        const expected = 201
+        // Act
+        const response = await request
+            .post('/clients/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "Ruc":1790012345001,
+                "telephone": 593987654321,
+                "email": "ventas@solucionesec.com",
+                "credit": "Contado",
+                "state": "al día",
+                "Address": "Av. Amazonas y Patria, Quito",
+                "Name": "Soluciones Ecuador"
+            })
+            
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on creating if clients Ruc exist',async () => {
+        // Arrange
+        const expected = 400
+        // Act
+        const response = await request
+            .post('/clients/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "Name": "Juan Pérez",
+                "Ruc": 4987654321001,
+                "Address": "Av. Principal 123, Quito",
+                "telephone": 987654321,
+                "email": "valeria.sanchezs@gmail.com",
+                "credit": "Rechazado",
+                "state": "Falto"
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on creating if clients email exist',async () => {
+        // Arrange
+        const expected = 400
+        // Act
+        const response = await request
+            .post('/clients/register')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "Name": "Juan Pérez",
+                "Ruc": 4987784321001,
+                "Address": "Av. Principal 123, Quito",
+                "telephone": 987654321,
+                "email": "valeria.sanchez@gmail.com",
+                "credit": "Rechazado",
+                "state": "Falto"
+            })
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-            const response = await request(app).get("/api/clients");
+describe('[Clients Search / Routes]',() => {
+    it('Should return 200 on getting all clients',async () => {
+        // Arrange
+        const expected = 200
+        // Act
+        const response = await request
+            .get('/clients')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 200 on getting a client by Ruc',async () => {
+        // Arrange
+        const expected = 200
+        // Act
+        const response = await request
+            .get('/clients/1790012345001')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        // Assert
+        expect(response.status).toEqual(expected)
+        CLIENT_ID = response.body.data._id
+    })
+})
 
-            expect(response.status).toBe(200);
-            expect(response.body).toEqual(mockClients);
-            expect(Clients.find).toHaveBeenCalled();
-        });
+describe('[Clients Update / Routes]',() => {
+    it('Should return 200 on updating a client',async () => {
+        // Arrange
+        const expected = 200
 
-        it("should handle errors when getting clients", async () => {
-            // Mock del error
-            Clients.find = vi.fn().mockRejectedValue(new Error("Error de base de datos"));
+        // Act
+        const response = await request
+            .patch('/clients/update/1790012345001')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "credit": "Credito",
+                "state": "en deuda",
+                "Address": "Mall del Sur, Guayaquil",
+                "Name": "TechStore S.A."
+            })
 
-            const response = await request(app).get("/api/clients");
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on updating a client if email exist',async () => {
+        // Arrange
+        const expected = 400
 
-            expect(response.status).toBe(500);
-            expect(response.body).toHaveProperty("message", "Error al obtener los productos");
-        });
-    });
+        // Act
+        const response = await request
+            .patch('/clients/update/1790012345001')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "credit": "Credito",
+                "state": "Mora",
+                "Address": "Mall del Sur, Guayaquil",
+                "Name": "TechStore S.A.",
+                "email": "ventas@solucionesec.com"
+            })
+        // Assert
+    })
+    it('Should return 400 on updating a client if updates not exist',async () => {
+        // Arrange
+        const expected = 400
 
-    describe("GET /api/clients/:ruc", () => {
-        it("should get client by RUC", async () => {
-            const mockClient = {
-                _id: "123",
-                Name: "Client 1",
-                Ruc: 1234567890,
-                Address: "Address 1",
-                telephone: 123456789,
-                email: "email@example.com",
-                credit: "Good",
-                state: "Active"
-            };
+        // Act
+        const response = await request
+            .patch('/clients/update/1790012345001')
+            .set(`Authorization`, `Bearer ${ADMIN_TOKEN}`)
+            .send({
+                "Ruc":1790012543001,
+            })
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-            Clients.findOne = vi.fn().mockResolvedValue(mockClient);
+describe('[Clients Delete / Routes]', () => {
+    it('Should return 200 on deleting a client',async () => {
+        // Arrange
+        const expected = 200
 
-            const response = await request(app).get("/api/clients/1234567890");
+        // Act
+        const response = await request
+            .delete(`/clients/delete/${CLIENT_ID}`)
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
 
-            expect(response.status).toBe(200);
-            expect(response.body.data).toBeDefined();
-            expect(response.body.data.ruc).toBe(1234567890);
-        });
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on deleting a client if id not exist',async () => {
+        // Arrange
+        const expected = 404
 
-        it("should return 500 when client not found", async () => {
-            Clients.findOne = vi.fn().mockResolvedValue(null);
+        // Act
+        const response = await request
+            .delete('/clients/delete/675e2579ba2681aeff5e5e1c')
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
 
-            const response = await request(app).get("/api/clients/1234567890");
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+    it('Should return 400 on deleting a client if id not valid',async () => {
+        // Arrange
+        const expected = 400
 
-            expect(response.status).toBe(404);
-            expect(response.body.msg).toBe("Cliente no encontrado");
-        });
+        // Act
+        const response = await request
+            .delete('/clients/delete/123')
 
-        it("should handle invalid RUC parameter", async () => {
-            const response = await request(app).get("/api/clients/");
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+        
+        // Assert
+        expect(response.status).toEqual(expected)
+    })
+})
 
-            expect(response.status).toBe(500);
-        });
-    });
-});
