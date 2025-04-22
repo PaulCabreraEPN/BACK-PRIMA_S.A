@@ -3,13 +3,15 @@ import { CreateProduct,getAllProducts, getProductsById,updatedProduct,deleteProd
 import { verificarAutenticacion } from '../middlewares/JWT.js'
 import processImage from '../middlewares/claudinary_middleware.js'
 import {upload} from '../middlewares/multer.js'
+import { createProductValidator, getProductValidator, updateProductValidator ,deleteProductValidator } from '../validators/products_validator.js'
+import {validateRequest} from '../middlewares/validator_middleware.js'
 
 const router = Router()
-router.post('/products/register', verificarAutenticacion,upload.single('image'),processImage, CreateProduct)
+router.post('/products/register', verificarAutenticacion,upload.single('image'),createProductValidator,validateRequest,processImage, CreateProduct)
 router.get('/products', verificarAutenticacion, getAllProducts)
-router.get('/products/:id', verificarAutenticacion, getProductsById)
-router.patch('/products/update/:id', verificarAutenticacion,upload.single('image'),processImage, updatedProduct)
-router.delete('/products/delete/:id', verificarAutenticacion, deleteProduct)
+router.get('/products/:id', verificarAutenticacion,getProductValidator,validateRequest, getProductsById)
+router.patch('/products/update/:id', verificarAutenticacion,upload.single('image'),updateProductValidator,validateRequest,processImage, updatedProduct)
+router.delete('/products/delete/:id', verificarAutenticacion,deleteProductValidator,validateRequest, deleteProduct)
 
 export default router
 
