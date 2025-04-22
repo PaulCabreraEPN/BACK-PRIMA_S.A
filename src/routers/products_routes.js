@@ -11,7 +11,7 @@ const router = Router()
 router.post('/products/register', verificarAutenticacion,upload.single('image'),imageRequired,createProductValidator,validateRequest,processImage, CreateProduct)
 router.get('/products', verificarAutenticacion, getAllProducts)
 router.get('/products/:id', verificarAutenticacion,getProductValidator,validateRequest, getProductsById)
-router.patch('/products/update/:id', verificarAutenticacion,upload.single('image'),updateProductValidator,validateRequest,processImage, updatedProduct)
+router.patch('/products/update/:id', verificarAutenticacion,upload.single('image'),imageRequired,updateProductValidator,validateRequest,processImage, updatedProduct)
 router.delete('/products/delete/:id', verificarAutenticacion,deleteProductValidator,validateRequest, deleteProduct)
 
 export default router
