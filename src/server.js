@@ -10,6 +10,7 @@ import staticsRoutes from './routers/statics_routes.js'
 import authRoutes from './routers/auth_routes.js'
 import swaggerUI from 'swagger-ui-express'
 import specs from '../swagger/swagger.js';
+import { errorHandler } from './middlewares/errorhandler.js';
 
 // Inicializaciones
 const app = express();
@@ -44,5 +45,6 @@ app.use('/api-docs',swaggerUI.serve,swaggerUI.setup(specs))
 
 app.use((req,res)=>res.status(404).send("EndPoint no encontrado - 404"))
 
+app.use(errorHandler)
 // Exportar la instancia de express por medio de app
 export default  app;

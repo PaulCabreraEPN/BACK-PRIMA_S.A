@@ -1,11 +1,5 @@
 import { deleteImage } from '../helpers/claudinary.js';
 import Products from '../models/products.js';
-import multer from 'multer';
-
-
-// Configuración de multer para almacenar la imagen en memoria
-const storage = multer.memoryStorage();
-export const upload = multer({ storage: storage });
 
 
 const CreateProduct = async(req,res) => {
