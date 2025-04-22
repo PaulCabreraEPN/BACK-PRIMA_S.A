@@ -7,3 +7,12 @@ export const errorHandler = (err, req, res, next) => {
     // Otros errores generales
     return res.status(500).json({ error: 'Error del servidor.' });
 };
+
+export const imageRequired = (req, res, next) => {
+    if (!req.file) {
+        // Si multer no adjuntó un archivo, envía una respuesta 400
+        return res.status(400).json({ message: 'El archivo de imagen es obligatorio' });
+    }
+    // Si el archivo existe, continúa con el siguiente middleware
+    next();
+};

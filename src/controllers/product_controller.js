@@ -47,8 +47,7 @@ const CreateProduct = async(req,res) => {
                 console.error('Error al eliminar la imagen de Cloudinary:', cloudinaryError);
             }
         }
-        console.log(error)
-        res.status(500).json({message:"Error al crear el producto"})
+        res.status(500).json({message:"Error al crear el producto",error:error.message})
     }
 }
 
