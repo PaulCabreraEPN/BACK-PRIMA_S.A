@@ -10,7 +10,7 @@ import staticsRoutes from './routers/statics_routes.js'
 import authRoutes from './routers/auth_routes.js'
 import swaggerUI from 'swagger-ui-express'
 import specs from '../swagger/swagger.js';
-import { errorHandler } from './middlewares/errorhandler.js';
+import { errorHandler } from './middlewares/errorHandler.js';
 
 // Inicializaciones
 const app = express();
