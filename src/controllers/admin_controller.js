@@ -29,7 +29,6 @@ const login_admin = async (req,res) => {
             if(verifyAdminBDD.chances<=0){
                 verifyAdminBDD.status = false;
             }
-            console.log(verifyAdminBDD.chances);
             await verifyAdminBDD.save()
             return res.status(400).json({msg: `Contraseña erronea. Le quedan ${verifyAdminBDD.chances} intentos`});       
         }else{
