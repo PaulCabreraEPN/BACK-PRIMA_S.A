@@ -44,10 +44,9 @@ const CreateProduct = async (req, res) => {
                 try {
                     await deleteImage(req.imageUrl);
                     creationDetails.imageAction = "Eliminada (Duplicado)";
-                    console.log('Imagen eliminada de Cloudinary (producto duplicado)');
                 } catch (cloudinaryError) {
                     creationDetails.imageAction = "Error al eliminar (Duplicado)";
-                    console.error('Error al eliminar la imagen de Cloudinary:', cloudinaryError);
+                    //console.error('Error al eliminar la imagen de Cloudinary:', cloudinaryError);
                     // No detenemos el flujo, pero registramos el fallo en la eliminación
                     creationDetails.message += " Error al intentar eliminar la imagen subida.";
                 }
@@ -192,7 +191,7 @@ const updatedProduct = async (req, res) => {
                     updateDetails.newImageDeletedOnError = true; // Se eliminó por error
                 } catch (cloudinaryError) {
                     updateDetails.imageAction = "Error al eliminar (Producto No Encontrado)";
-                    console.error('Error al eliminar imagen subida para producto no encontrado:', cloudinaryError);
+                    //console.error('Error al eliminar imagen subida para producto no encontrado:', cloudinaryError);
                     updateDetails.message += " Error adicional al intentar eliminar la imagen subida.";
                 }
             }
@@ -238,10 +237,9 @@ const updatedProduct = async (req, res) => {
                     await deleteImage(oldImageUrl);
                     updateDetails.oldImageDeleted = true;
                     updateDetails.imageAction = "Reemplazada"; // Se reemplazó la anterior
-                    console.log('Imagen anterior eliminada de Cloudinary');
                 } catch (cloudinaryError) {
                     updateDetails.imageAction = "Error al eliminar anterior";
-                    console.error('Error al eliminar la imagen anterior:', cloudinaryError);
+                    //console.error('Error al eliminar la imagen anterior:', cloudinaryError);
                     // Continuar de todos modos, pero registrar el fallo
                     updateDetails.message += " No se pudo eliminar la imagen anterior.";
                 }
@@ -302,10 +300,9 @@ const updatedProduct = async (req, res) => {
                 await deleteImage(newImageUrl);
                 updateDetails.imageAction = "Eliminada (Error Actualización)";
                 updateDetails.newImageDeletedOnError = true;
-                console.log('Imagen nueva eliminada de Cloudinary (error en actualizar)');
             } catch (cloudinaryError) {
                 updateDetails.imageAction = "Error al eliminar (Error Actualización)";
-                console.error('Error al eliminar la imagen nueva de Cloudinary tras error:', cloudinaryError);
+                //console.error('Error al eliminar la imagen nueva de Cloudinary tras error:', cloudinaryError);
                 updateDetails.message += " Error adicional al intentar eliminar la imagen nueva subida.";
             }
         }
@@ -318,7 +315,6 @@ const updatedProduct = async (req, res) => {
     }
 }
 
-//* Eliminar producto
 //* Eliminar producto
 const deleteProduct = async (req, res) => {
     let deletionDetails = { // Objeto para detalles de la operación

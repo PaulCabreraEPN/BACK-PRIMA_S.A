@@ -25,7 +25,7 @@ export const uploadImage = async (imageBuffer) => {
             uploadStream.end(imageBuffer);
         });
     } catch (error) {
-        console.error('Error al procesar la imagen:', error);
+        //console.error('Error al procesar la imagen:', error);
         throw error;
     }
 }
@@ -45,7 +45,7 @@ export const deleteImage = async (imageUrl) => {
         const result = await cloudinary.uploader.destroy(publicId);
         return result;
     } catch (error) {
-        console.error('Error al eliminar la imagen de Cloudinary:', error);
+        //console.error('Error al eliminar la imagen de Cloudinary:', error);
         throw error;
     }
 }
