@@ -70,7 +70,6 @@ const GetTopSellers = async (req, res) => {
         });
 
     } catch (error) {
-        console.error("Error en GetTopSellers: ", error);
         res.status(500).json({
             message: "Error al obtener el top de vendedores",
             error: error.message
@@ -114,7 +113,6 @@ const GetSalesBySeller = async (req, res) => {
         res.status(200).json({ names, totalSales });
 
     } catch (error) {
-        console.error("Error en GetSalesBySeller: ", error);
         res.status(500).json({
             message: "Error al obtener las ventas por vendedor",
             error: error.message
@@ -162,7 +160,6 @@ const getWeeklySales = async (req, res) => {
 
         res.status(200).json({ weekDays, salesByDay });
     } catch (error) {
-        console.error("Error en getWeeklySales: ", error);
         res.status(500).json({ message: "Error al obtener las ventas semanales", error: error.message });
     }
 };
