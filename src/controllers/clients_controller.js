@@ -1,89 +1,159 @@
 import Clients from '../models/clients.js';
 
-const RegisterClient = async (req,res) => {
+const RegisterClient = async (req, res) => {
     try {
-        const {Ruc,email} = req.body;
-    
-        const verifyClient = await Clients.findOne({Ruc:Ruc});
-    
-        if(verifyClient){return res.status(400).json({message:"El cliente ya existe"})}
-    
-        const verifyEmail = await Clients.findOne({email:email,});
-    
-        if(verifyEmail){return res.status(400).json({message:"El email ya existe"})}
-    
+        const { Ruc, email } = req.body;
+
+        // Validación básica (se puede mejorar con express-validator)
+        if (!Ruc || !email) {
+            return res.status(400).json({
+                status: "error",
+                code: "MISSING_FIELD",
+                msg: "Los campos 'Ruc' y 'email' son obligatorios."
+            });
+        }
+        // Aquí podrías añadir validación de formato para Ruc y email
+
+        const verifyClient = await Clients.findOne({ Ruc: Ruc });
+        if (verifyClient) {
+            return res.status(409).json({ // 409 Conflict es más adecuado para recurso existente
+                status: "error",
+                code: "RESOURCE_ALREADY_EXISTS",
+                msg: `El cliente con RUC '${Ruc}' ya existe.`
+            });
+        }
+
+        const verifyEmail = await Clients.findOne({ email: email });
+        if (verifyEmail) {
+            return res.status(409).json({ // 409 Conflict
+                status: "error",
+                code: "RESOURCE_ALREADY_EXISTS",
+                msg: `El email '${email}' ya está registrado por otro cliente.`
+            });
+        }
+
         const newClient = new Clients(req.body);
-        await newClient.save()
-        res.status(201).json({message:"Cliente registrado con éxito"});
-        
+        await newClient.save();
+
+        // Devolver solo los datos relevantes, no todo req.body
+        const clientData = {
+            _id: newClient._id,
+            Name: newClient.Name,
+            Ruc: newClient.Ruc,
+            Address: newClient.Address,
+            telephone: newClient.telephone,
+            email: newClient.email,
+            credit: newClient.credit,
+            state: newClient.state,
+        };
+
+        return res.status(201).json({ // 201 Created
+            status: "success",
+            code: "CLIENT_REGISTERED",
+            msg: "Cliente registrado con éxito.",
+            data: clientData
+        });
+
     } catch (error) {
-        res.status(500).json({message:"Error al registrar el cliente",error:error.message})
+        //console.error("Error en RegisterClient:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al registrar el cliente. Intente de nuevo más tarde."
+        });
     }
 }
 
 const getAllClients = async (req, res) => {
     try {
-        const ClientsBDD = await Clients.find().select("-_id")
-        res.status(200).json(ClientsBDD);
+        // Excluir _id si no se necesita, pero incluir otros campos necesarios
+        const clientsBDD = await Clients.find().select("Name Ruc Address telephone email credit state"); // Ajusta los campos según necesidad
+        return res.status(200).json({
+            status: "success",
+            code: "CLIENTS_FETCHED",
+            msg: "Clientes obtenidos correctamente.",
+            data: clientsBDD
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener los productos", error: error.message })
+        //console.error("Error en getAllClients:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener los clientes. Intente de nuevo más tarde."
+        });
     }
 }
 
 const getClientsById = async (req, res) => {
-    //* Paso 1 - Tomar Datos del Request
-    const { ruc } = req.params;
-
-    //* Paso 2 - Validar Datos
-    if (!ruc) {
-        return res.status(400).json({
-            msg: "Por favor, ingrese un RUC válido",
-        });
-    }
-
-    //* Paso 3 - Interactuar con BDD
     try {
-        const client = await Clients.findOne({ Ruc: ruc }); // Usamos findOne para buscar por RUC
-        if (!client) {
-            return res.status(404).json({
-                msg: "Cliente no encontrado",
+        //* Paso 1 - Tomar Datos del Request
+        const { ruc } = req.params;
+
+        //* Paso 2 - Validar Datos (Básica, idealmente con express-validator)
+        if (!ruc) { // Podría validarse formato de RUC aquí también
+            return res.status(400).json({
+                status: "error",
+                code: "MISSING_FIELD", // O INVALID_FORMAT si la validación es más específica
+                msg: "El parámetro 'ruc' es obligatorio."
             });
         }
 
-        // Preparar los datos del cliente para enviar
-        const clientData = {
-            _id: client._id,
-            name: client.Name,
-            ruc: client.Ruc,
-            address: client.Address,
-            telephone: client.telephone,
-            email: client.email,
-            credit: client.credit,
-            state: client.state,
-        };
+        //* Paso 3 - Interactuar con BDD
+        const client = await Clients.findOne({ Ruc: ruc }).select("Name Ruc Address telephone email credit state"); // Seleccionar campos
+        if (!client) {
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `No se encontró cliente con RUC ${ruc}.`
+            });
+        }
 
-        return res.status(200).json({ data: clientData });
+        return res.status(200).json({
+            status: "success",
+            code: "CLIENT_FOUND",
+            msg: "Cliente encontrado.",
+            data: client // El objeto ya tiene los campos seleccionados
+        });
     } catch (error) {
-        console.error(error);
+        //console.error("Error en getClientsById:", error); // Log interno
         return res.status(500).json({
-            msg: "Error al buscar el cliente",
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al buscar el cliente. Intente de nuevo más tarde."
         });
     }
 }
 
-const UpdateClient = async (req,res) => {
+const UpdateClient = async (req, res) => {
     try {
-        const {ruc} = req.params;
+        const { ruc } = req.params;
         const updatedData = req.body;
 
-        // Validar el RUC
+        if (!ruc) {
+            return res.status(400).json({
+                status: "error",
+                code: "MISSING_FIELD",
+                msg: "El parámetro 'ruc' es obligatorio."
+            });
+        }
+
+        // Validar si el email proporcionado ya existe en otro cliente
+        if (updatedData.email) {
+            const verifyEmail = await Clients.findOne({ email: updatedData.email, Ruc: { $ne: ruc } }); // Excluir el cliente actual
+            if (verifyEmail) {
+                return res.status(409).json({ // 409 Conflict
+                    status: "error",
+                    code: "RESOURCE_ALREADY_EXISTS",
+                    msg: `El email '${updatedData.email}' ya está registrado por otro cliente.`
+                });
+            }
+        }
 
 
-        // Obtener los atributos válidos del modelo
+        // Obtener los atributos válidos del modelo (mejor si se define explícitamente)
         const validFields = ['Name', 'Address', 'telephone', 'email', 'credit', 'state'];
         const filteredUpdates = {};
-        const verifyEmail = await Clients.findOne({email:updatedData.email,});
-        if(verifyEmail){return res.status(400).json({message:"El email ya existe"});}
+
         // Filtrar los campos válidos para la actualización
         for (const key in updatedData) {
             if (validFields.includes(key)) {
@@ -93,32 +163,86 @@ const UpdateClient = async (req,res) => {
 
         // Validar si hay campos válidos para actualizar
         if (Object.keys(filteredUpdates).length === 0) {
-            return res.status(400).json({ msg: "No se proporcionaron campos válidos para actualizar" });
+            return res.status(400).json({
+                status: "error",
+                code: "NO_UPDATABLE_FIELDS",
+                msg: "No se proporcionaron campos válidos para actualizar."
+            });
         }
 
         // Actualizar el cliente
-        const clientToUpdate = await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates,{new:true});
-        if(!clientToUpdate) {
-            return res.status(404).json({ msg: "Cliente no encontrado" });
+        const clientToUpdate = await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates, { new: true }).select("Name Ruc Address telephone email credit state"); // Devolver el doc actualizado y seleccionar campos
+
+        if (!clientToUpdate) {
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `No se encontró cliente con RUC ${ruc} para actualizar.`
+            });
         }
-        res.status(200).json({ msg: "Cliente actualizado correctamente", data: filteredUpdates });
+
+        return res.status(200).json({
+            status: "success",
+            code: "CLIENT_UPDATED",
+            msg: "Cliente actualizado correctamente.",
+            data: clientToUpdate // Devolver el cliente actualizado
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al actualizar el cliente", error: error.message });
+        //console.error("Error en UpdateClient:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al actualizar el cliente. Intente de nuevo más tarde."
+        });
     }
 }
 
-const DeleteClient = async (req,res) => {
-    const {id} = req.params;
+const DeleteClient = async (req, res) => {
     try {
+        const { id } = req.params; // Asumiendo que se usa el _id de MongoDB
+
+        if (!id) { // Validar que el ID está presente
+            return res.status(400).json({
+                status: "error",
+                code: "MISSING_FIELD",
+                msg: "El parámetro 'id' es obligatorio."
+            });
+        }
+        // Podría añadirse validación de formato de ObjectId si es necesario
+
         const deletedClient = await Clients.findByIdAndDelete(id);
-        if(!deletedClient){return res.status(404).json({message:"Cliente no encontrado"})}
-        res.status(200).json({message:"Cliente eliminado con éxito"});
+
+        if (!deletedClient) {
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `No se encontró cliente con ID ${id} para eliminar.`
+            });
+        }
+
+        return res.status(200).json({
+            status: "success",
+            code: "CLIENT_DELETED",
+            msg: "Cliente eliminado con éxito."
+            // No se suele devolver data en delete exitoso
+        });
     } catch (error) {
-        res.status(500).json({message:"Error al eliminar el cliente",error:error.message})
+        //console.error("Error en DeleteClient:", error); // Log interno
+         // Manejar error específico si el ID no es un ObjectId válido
+        if (error.name === 'CastError' && error.kind === 'ObjectId') {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: `El ID '${req.params.id}' no tiene un formato válido.`
+            });
+        }
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al eliminar el cliente. Intente de nuevo más tarde."
+        });
     }
 }
-
-
 
 export {
     RegisterClient,

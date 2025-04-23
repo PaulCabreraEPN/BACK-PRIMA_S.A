@@ -18,7 +18,7 @@ beforeAll(async () => {
         username: process.env.ADMIN_USER,
         password: process.env.ADMIN_PASSWORD
     })
-    ADMIN_TOKEN = response.body.tokenJWT
+    ADMIN_TOKEN = response.body.data.token
 })
 
 afterAll(async () => {
@@ -47,7 +47,6 @@ describe('[Clients Registration / Routes]',() => {
                 "Address": "Av. Amazonas y Patria, Quito",
                 "Name": "Soluciones Ecuador"
             })
-            
         // Assert
         expect(response.status).toEqual(expected)
     })
