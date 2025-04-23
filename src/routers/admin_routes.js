@@ -6,7 +6,6 @@ import {
     searchSellerByNumberId, 
     seeSellers,
     updateSellerController,
-    UpdateAllSellerController,
     DeleteSellerController, 
     loginSeller,
     passwordRecovery,
@@ -18,7 +17,6 @@ import { verificarAutenticacion } from '../middlewares/JWT.js'
 import { 
     validateCreateSeller, 
     validateUpdateSeller,
-    validateUpdateAllSeller,
     validateFindSellerById,
     validateFindSellerByNumberId 
 } from '../validators/seller_validator.js';
@@ -55,7 +53,6 @@ router.get('/sellers-numberid/:numberID', verificarAutenticacion,validateFindSel
 router.get('/sellers/:id', verificarAutenticacion,validateFindSellerById,validateRequest, searchSellerById)
 // Rutas para actualizar 
 router.patch("/updateSeller/:id", verificarAutenticacion,validateUpdateSeller,validateRequest, updateSellerController)
-router.put("/updateAllSellerinfo/:id", verificarAutenticacion,validateUpdateAllSeller,validateRequest, UpdateAllSellerController)
 // Ruta para Eliminar 
 router.delete("/deleteSellerinfo/:id", verificarAutenticacion,validateFindSellerById, validateRequest, DeleteSellerController)
 
