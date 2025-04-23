@@ -17,7 +17,6 @@ const RegisterClient = async (req,res) => {
         res.status(201).json({message:"Cliente registrado con éxito"});
         
     } catch (error) {
-        console.log(error);
         res.status(500).json({message:"Error al registrar el cliente",error:error.message})
     }
 }
@@ -104,7 +103,6 @@ const UpdateClient = async (req,res) => {
         }
         res.status(200).json({ msg: "Cliente actualizado correctamente", data: filteredUpdates });
     } catch (error) {
-        console.error(error);
         res.status(500).json({ message: "Error al actualizar el cliente", error: error.message });
     }
 }
@@ -116,7 +114,6 @@ const DeleteClient = async (req,res) => {
         if(!deletedClient){return res.status(404).json({message:"Cliente no encontrado"})}
         res.status(200).json({message:"Cliente eliminado con éxito"});
     } catch (error) {
-        console.error(error);
         res.status(500).json({message:"Error al eliminar el cliente",error:error.message})
     }
 }
