@@ -6,10 +6,10 @@ import mongoose from 'mongoose'
 
 
 //* Crear Ordenes
-const createOrder = async(req,res) => {
+const createOrder = async (req, res) => {
     try {
         const { customer, products, discountApplied, netTotal, totalWithTax } = req.body;
-        
+
         // Validaciones iniciales
         if (!customer || !products || !discountApplied || !netTotal || !totalWithTax) {
             return res.status(400).json({ message: "Todos los campos son requeridos" });
@@ -19,8 +19,8 @@ const createOrder = async(req,res) => {
             return res.status(400).json({ message: "Los valores numéricos deben ser positivos" });
         }
 
-        const customerExists = await Clients.findOne({Ruc: customer});
-        
+        const customerExists = await Clients.findOne({ Ruc: customer });
+
         if (!customerExists) {
             return res.status(404).json({ message: "Cliente no encontrado" });
         }
@@ -31,15 +31,15 @@ const createOrder = async(req,res) => {
         // Verificación inicial de productos y stock
         for (const product of products) {
             console.log(`Verificando producto ID: ${product.productId}`);
-            
+
             // Convertir productId a número ya que en el modelo es type: Number
             const productId = parseInt(product.productId);
-            
+
             const productInDB = await Products.findOne({ id: productId });
-            
+
             if (!productInDB) {
-                return res.status(404).json({ 
-                    message: `Producto no encontrado: ${product.productId}` 
+                return res.status(404).json({
+                    message: `Producto no encontrado: ${product.productId}`
                 });
             }
 
@@ -47,8 +47,8 @@ const createOrder = async(req,res) => {
             console.log(`Cantidad solicitada: ${product.quantity}`);
 
             if (productInDB.stock < product.quantity) {
-                return res.status(400).json({ 
-                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${product.quantity}` 
+                return res.status(400).json({
+                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${product.quantity}`
                 });
             }
 
@@ -64,7 +64,7 @@ const createOrder = async(req,res) => {
             console.log(`Actualizando stock del producto ${product.id}`);
             console.log(`Stock antes de actualizar: ${product.currentStock}`);
             console.log(`Cantidad a restar: ${product.quantity}`);
-            
+
             const result = await Products.findOneAndUpdate(
                 { id: product.id },
                 { $inc: { stock: -product.quantity } },
@@ -81,11 +81,30 @@ const createOrder = async(req,res) => {
         // Crear la orden
         const newOrder = new Orders(req.body);
         newOrder.seller = req.SellerBDD._id;
-        const savedOrder = await newOrder.save();
+        const savedDoc = await newOrder.save()
+
+        // Convertir a objeto plano y seleccionar los campos deseados para la respuesta
+        const savedOrderResponse = {
+            _id: savedDoc._id,
+            customer: savedDoc.customer,
+            products: savedDoc.products.map(p => ({ // Asegurar formato de productos
+                productId: p.productId,
+                quantity: p.quantity
+            })),
+            discountApplied: savedDoc.discountApplied,
+            netTotal: savedDoc.netTotal,
+            totalWithTax: savedDoc.totalWithTax,
+            status: savedDoc.status,
+            comment: savedDoc.comment,
+            registrationDate: savedDoc.registrationDate, // Incluir fecha de registro
+            lastUpdate: savedDoc.lastUpdate,           // Incluir fecha de última actualización
+            seller: savedDoc.seller                   // Incluir ID del vendedor
+            // No incluir __v, createdAt, updatedAt u otros campos no deseados
+        };
 
         res.status(201).json({
             msg: "Orden creada con éxito",
-            savedOrder
+            savedOrderResponse
         });
 
     } catch (error) {
@@ -101,17 +120,27 @@ const createOrder = async(req,res) => {
 //* Actualizar Orden
 const updateOrder = async (req, res) => {
     try {
-        // Toma de datos
         const { id } = req.params;
-        const { products, discountApplied, netTotal, totalWithTax } = req.body;
+        // Renombrar 'products' de req.body para evitar confusión con la variable interna
+        const { products: newProductsData, discountApplied, netTotal, totalWithTax,comment } = req.body;
 
-        // Validaciones
-        if (Object.values(req.body).includes("")) {
-            return res.status(400).json({ msg: "Lo sentimos, debes llenar todos los campos" });
+        // --- Validaciones Iniciales ---
+        if (!newProductsData || !discountApplied || !netTotal || !totalWithTax) {
+            return res.status(400).json({ msg: "Lo sentimos, debes llenar todos los campos requeridos (products, discountApplied, netTotal, totalWithTax)" });
+        }
+        // Validar que products sea un array
+        if (!Array.isArray(newProductsData)) {
+            return res.status(400).json({ msg: "El campo 'products' debe ser un array." });
+        }
+        // Validar contenido de products
+        for (const product of newProductsData) {
+            if (!product.productId || product.quantity == null || product.quantity <= 0) {
+                return res.status(400).json({ msg: "Cada producto debe tener 'productId' y 'quantity' (mayor que 0)." });
+            }
         }
 
         if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
-            return res.status(400).json({ message: "Los valores numéricos deben ser positivos" });
+            return res.status(400).json({ message: "Los valores numéricos (discountApplied, netTotal, totalWithTax) deben ser positivos" });
         }
 
         const orderToUpdate = await Orders.findById(id);
@@ -121,100 +150,120 @@ const updateOrder = async (req, res) => {
         }
 
         if (orderToUpdate.status !== "Pendiente") {
-            return res.status(400).json({ message: "El pedido ya no se puede actualizar" });
+            return res.status(400).json({ message: "El pedido ya no se puede actualizar porque su estado no es 'Pendiente'" });
         }
 
-        // Obtener IDs de productos actuales y nuevos
-        const currentProductIds = orderToUpdate.products.map(product => parseInt(product.productId));
-        const newProductIds = products.map(product => parseInt(product.productId));
+        // --- Lógica de Actualización de Stock ---
 
-        // Traer todos los productos involucrados de la base de datos
-        const allProductIds = Array.from(new Set([...currentProductIds, ...newProductIds]));
-        const productsInDB = await Products.find({ id: { $in: allProductIds } });
+        // 1. Crear mapas de cantidades antiguas y nuevas
+        const oldQuantities = orderToUpdate.products.reduce((map, p) => {
+            map[parseInt(p.productId)] = p.quantity;
+            return map;
+        }, {});
+        const newQuantities = newProductsData.reduce((map, p) => {
+            // Sumar cantidades si el mismo productId aparece varias veces en la entrada
+            const pId = parseInt(p.productId);
+            map[pId] = (map[pId] || 0) + p.quantity;
+            return map;
+        }, {});
 
-        // Crear un mapa de productos para acceso rápido
+        // 2. Obtener todos los IDs de productos involucrados (antiguos y nuevos)
+        const allInvolvedProductIds = Array.from(new Set([
+            ...Object.keys(oldQuantities).map(Number),
+            ...Object.keys(newQuantities).map(Number)
+        ]));
+
+        // 3. Obtener el estado actual de los productos desde la BD
+        const productsInDB = await Products.find({ id: { $in: allInvolvedProductIds } });
         const productsMap = productsInDB.reduce((acc, product) => {
-            acc[product.id] = product;
+            acc[product.id] = product; // Guardar el documento completo del producto
             return acc;
         }, {});
 
-        // Restaurar stock de los productos que ya no están en el pedido
-        for (const product of orderToUpdate.products) {
-            const productId = parseInt(product.productId);
+        // 4. Calcular el cambio neto de stock para cada producto y verificar disponibilidad
+        const stockChanges = {}; // { productId: netChange }
+        const bulkWriteOps = [];
+
+        for (const productId of allInvolvedProductIds) {
             const productInDB = productsMap[productId];
 
-            if (productInDB) {
-                await Products.findOneAndUpdate(
-                    { id: productId },
-                    { $inc: { stock: product.quantity } },
-                    { new: true }
-                );
+            // Verificar si el producto existe en la BD (importante si se añade uno nuevo)
+            if (!productInDB && newQuantities[productId] > 0) {
+                return res.status(404).json({ message: `Producto con ID ${productId} no encontrado en la base de datos.` });
             }
-        }
+            // Si el producto solo estaba en la orden original y no en la BD (caso raro), no hacer nada con su stock
+            if (!productInDB) continue;
 
-        // Verificar stock y preparar actualizaciones para los nuevos productos
-        const productsToUpdate = [];
 
-        for (const product of products) {
-            const productId = parseInt(product.productId);
-            const productInDB = productsMap[productId];
+            const oldQty = oldQuantities[productId] || 0;
+            const newQty = newQuantities[productId] || 0;
+            const netChange = oldQty - newQty; // Positivo = devolver stock, Negativo = quitar stock
 
-            if (!productInDB) {
-                return res.status(404).json({
-                    message: `Producto no encontrado: ${productId}`
+            if (netChange !== 0) {
+                // Verificar si hay suficiente stock *antes* de preparar la operación
+                // El stock final será: productInDB.stock + netChange
+                if (productInDB.stock + netChange < 0) {
+                    return res.status(400).json({
+                        message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, se intentarían quitar ${-netChange} unidades.`
+                    });
+                }
+                // Añadir operación al bulkWrite
+                bulkWriteOps.push({
+                    updateOne: {
+                        filter: { id: productId },
+                        update: { $inc: { stock: netChange } }
+                    }
                 });
             }
-
-            if (productInDB.stock < product.quantity) {
-                return res.status(400).json({
-                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${product.quantity}`
-                });
-            }
-
-            productsToUpdate.push({
-                productId: product.productId,
-                quantity: product.quantity,
-                currentStock: productInDB.stock
-            });
         }
 
-        // Actualizar stock de los nuevos productos
-        for (const product of productsToUpdate) {
-            const productId = parseInt(product.productId);
-            await Products.findOneAndUpdate(
-                { id: productId },
-                { $inc: { stock: -product.quantity } },
-                { new: true }
-            );
+        // --- Ejecutar Actualizaciones ---
+
+        // 5. Aplicar cambios de stock en la BD (si hay cambios)
+        if (bulkWriteOps.length > 0) {
+            await Products.bulkWrite(bulkWriteOps);
+            console.log(`Stock actualizado para ${bulkWriteOps.length} productos.`);
         }
 
-        // Actualizar la orden con los nuevos productos
+        // 6. Preparar los datos para actualizar la orden
+        // Usar los datos validados y procesados de newQuantities para asegurar consistencia
+        const finalProductsArray = Object.entries(newQuantities).map(([productId, quantity]) => ({
+            productId: productId, // Asegurarse que sea string si el modelo lo espera así, o number si no. Asumiendo number basado en parseInt.
+            quantity: quantity
+        }));
+
+
         const filteredUpdates = {
-            products: productsToUpdate,
+            products: finalProductsArray, // Usar el array final procesado
             discountApplied: discountApplied,
             netTotal: netTotal,
-            totalWithTax: totalWithTax
+            totalWithTax: totalWithTax,
+            lastUpdate: new Date() // Actualizar fecha de modificación
         };
 
-        const updatedOrder = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true });
+        if(comment !== null){filteredUpdates.comment = comment;}
+        // Si no se quiere actualizar el comentario, no lo incluimos en filteredUpdates
+
+        // 7. Actualizar el documento de la orden
+        const updatedOrder = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true }).lean().select("-__v -createdAt -updatedAt");
 
         res.status(200).json({
-            msg: "Orden actualizada con éxito",
+            msg: "Orden actualizada con éxito y stock ajustado",
             updatedOrder
         });
 
     } catch (error) {
         console.error('Error en updateOrder: ', error);
+        // Detectar errores específicos si es posible (ej. CastError de Mongoose)
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de orden inválido." });
+        }
         res.status(500).json({
-            message: "Error al actualizar orden",
+            message: "Error interno del servidor al actualizar la orden",
             error: error.message
         });
     }
 };
-
-
-
-
 
 //* Actualizar el estado de una Orden
 const updateStateOrder = async (req, res) => {
@@ -225,14 +274,14 @@ const updateStateOrder = async (req, res) => {
     //* Paso 2 - Validar Datos
     // Validar si el id es un ObjectId válido
     if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({ 
-            msg: `No existe la proforma con el id ${id}. Ingrese un ID válido para actualizar.` 
+        return res.status(404).json({
+            msg: `No existe la proforma con el id ${id}. Ingrese un ID válido para actualizar.`
         });
     }
 
     if (!status) {
-        return res.status(400).json({ 
-            msg: "El campo 'status' es requerido para actualizar el estado." 
+        return res.status(400).json({
+            msg: "El campo 'status' es requerido para actualizar el estado."
         });
     }
 
@@ -243,13 +292,13 @@ const updateStateOrder = async (req, res) => {
         // Actualizar el estado y la fecha de última modificación
         const updatedOrder = await Orders.findByIdAndUpdate(
             id,
-            { status, lastUpdate: new Date(fechaActual.getTime() - fechaActual.getTimezoneOffset() * 60000)},
+            { status, lastUpdate: new Date(fechaActual.getTime() - fechaActual.getTimezoneOffset() * 60000) },
             { new: true }
         );
 
         if (!updatedOrder) {
-            return res.status(404).json({ 
-                msg: `No se encontró la proforma con el id ${id}.` 
+            return res.status(404).json({
+                msg: `No se encontró la proforma con el id ${id}.`
             });
         }
 
@@ -260,9 +309,9 @@ const updateStateOrder = async (req, res) => {
         });
     } catch (error) {
         console.error(error);
-        return res.status(500).json({ 
-            msg: "Error interno del servidor.", 
-            error: error.message 
+        return res.status(500).json({
+            msg: "Error interno del servidor.",
+            error: error.message
         });
     }
 };
@@ -532,12 +581,12 @@ const SeeOrderById = async (req, res) => {
 
 
 
-export{
+export {
     createOrder,
     updateOrder,
     SeeAllOrders,
     SeeOrderById,
     updateStateOrder,
     deleteOrder
-    
+
 }
