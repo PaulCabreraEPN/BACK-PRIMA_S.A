@@ -49,7 +49,7 @@ router.post('/recovery-password/:token',validateNewPassword,validateRequest,newP
 // Ruta para ver
 router.get('/sellers', verificarAutenticacion, seeSellers)
 // Rutas para Buscar
-router.get('/sellers-numberid/:numberID', verificarAutenticacion,validateFindSellerByNumberId,validateRequest, searchSellerByNumberId)
+router.get('/sellers-numberid/:cedula', verificarAutenticacion,validateFindSellerByNumberId,validateRequest, searchSellerByNumberId)
 router.get('/sellers/:id', verificarAutenticacion,validateFindSellerById,validateRequest, searchSellerById)
 // Rutas para actualizar 
 router.patch("/updateSeller/:id", verificarAutenticacion,validateUpdateSeller,validateRequest, updateSellerController)

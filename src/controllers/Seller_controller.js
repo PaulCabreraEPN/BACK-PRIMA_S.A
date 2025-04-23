@@ -9,7 +9,7 @@ import {generarJWT} from '../middlewares/JWT.js'
 const registerSeller = async (req, res) => {
     try {
         //* Paso 1 -Tomar Datos del Request
-    const {email,numberID,names} = req.body
+    const {email,cedula,names} = req.body
 
     //* Paso 2 - Validar Datos
     //? Verifica si un campo esta vacio
@@ -24,7 +24,7 @@ const registerSeller = async (req, res) => {
     }
 
     //? Verifica si el número de cédula ya está registrado
-    const verifyID = await Sellers.findOne({numberID})
+    const verifyID = await Sellers.findOne({cedula})
     if(verifyID) {
         return res.status(400).json({msg: "Número de cédula ya se encuentra registrado"})
     }
@@ -57,7 +57,7 @@ const registerSeller = async (req, res) => {
     await newSeller.save()
 
     // Enviar respuesta con el token
-    res.status(201).json({msg: "Vendedor registrado exitosamente",})
+    res.status(201).json({msg: "Vendedor registrado exitosamente",notification:`Se ha enviado un correo a ${email} para confirmar el registro y se ha generado un usuario y una contraseña temporal`})
     } catch (error) {
         console.log(error);
         res.status(500).json({msg: "Error al registrar el vendedor",error: error.message})
@@ -167,7 +167,7 @@ const seeSellers = async(req,res) => {
             _id: seller._id, 
             names: seller.names,
             lastNames: seller.lastNames,
-            numberID: seller.numberID,
+            cedula: seller.cedula,
             email: seller.email,
             username: seller.username,
             PhoneNumber: seller.PhoneNumber,
@@ -208,7 +208,7 @@ const searchSellerById = async (req, res) => {
             _id: seller._id, 
             names: seller.names,
             lastNames: seller.lastNames,
-            numberID: seller.numberID,
+            cedula: seller.cedula,
             email: seller.email,
             username: seller.username,
             PhoneNumber: seller.PhoneNumber,
@@ -227,21 +227,11 @@ const searchSellerById = async (req, res) => {
 //* Buscar un vendedor por cedula
 const searchSellerByNumberId = async (req, res) =>{
     //* Paso 1 - Tomar Datos del Request
-    const { numberID } = req.params;
+    const { cedula } = req.params;
     
-    //* Paso 2 - Validar Datos
-    if (!numberID || numberID.toString().trim() === ""){
-        return res.status(400).json({msg: "Lo sentimos, debes propocionar la cédula del vendedor"})
-    }
-
-    const longitud = String(numberID).length;
-    if (longitud!==10){
-        return res.status(400).json({msg: "Lo sentimos, formato de cédula invalido"})
-    }
-
     try {
         //* Paso 3 - Interactuar con BDD
-        const seller = await Sellers.findOne({ numberID }); 
+        const seller = await Sellers.findOne({ cedula }); 
         if (!seller) {
             return res.status(404).json({
                 msg: "Vendedor no encontrado"
@@ -252,7 +242,7 @@ const searchSellerByNumberId = async (req, res) =>{
             _id: seller._id, 
             name: seller.names,
             lastNames: seller.lastNames,
-            numberID: seller.numberID,
+            cedula: seller.cedula,
             email: seller.email,
             username: seller.username,
             PhoneNumber: seller.PhoneNumber,
@@ -284,7 +274,7 @@ const updateSellerController = async (req, res) => {
     });
 
     // Obtener los atributos válidos del modelo
-    const validFields = ['email', 'PhoneNumber', 'SalesCity', 'names', 'lastNames', 'numberID', 'role', 'status'];
+    const validFields = ['email', 'PhoneNumber', 'SalesCity', 'names', 'lastNames', 'cedula', 'role', 'status'];
     const filteredUpdates = {};
 
     // Filtrar los campos válidos para la actualización

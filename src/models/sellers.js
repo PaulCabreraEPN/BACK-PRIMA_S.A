@@ -12,7 +12,7 @@ const SellersSchema = new Schema({
         require:true,
         trim:true
     },
-    numberID:{
+    cedula:{
         type:Number,
         require:true,
         trim:true,
