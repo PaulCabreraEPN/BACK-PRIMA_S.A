@@ -58,31 +58,59 @@ const login_admin = async (req,res) => {
 }
 
 // Recuperar contraseña
-
 const recovery_pass_admin = async (req, res) => {
+    let emailStatus = { // Para guardar el resultado del envío de correo
+        sent: false,
+        message: ""
+    };
     try {
         //* Paso 1 -Tomar Datos del Request
         const {username} = req.body;
         const newpassword = passwordGeneratorbyAdmin();
-    
+
         //* Paso 2 - Validar Datos
         //? Verifica si un campo esta vacio
         if(Object.values(req.body).includes("")) {
             return res.status(400).json({msg: "Lo sentimos, debes llenar todos los campos"});
         }
-    
+
         //* Paso 3 - Interactuar con la base de datos
         const verifyAdminBDD = await admins.findOne({username});
+        // Verificar si el admin existe antes de proceder
+        if (!verifyAdminBDD) {
+            return res.status(404).json({msg: "Usuario administrador no encontrado"});
+        }
+
         verifyAdminBDD.password = await verifyAdminBDD.encryptPassword(newpassword);
         await verifyAdminBDD.save();
-        sendMailToRecoveryPassword(username, newpassword);
-    
-        return res.status(200).json({msg: `Nueva Contraseña generada, REVISA EL CORREO DE LA EMPRESA`});
-        
+
+        // Enviar correo y guardar el resultado
+        const emailResult = await sendMailToRecoveryPassword(username, newpassword);
+        emailStatus.sent = emailResult.success;
+        emailStatus.message = emailResult.message;
+
+        if (!emailResult.success) {
+            // Si el correo falla, aún así la contraseña se cambió. Informar al usuario.
+            //console.warn("Contraseña de admin actualizada, pero falló el envío del correo:", emailResult.message);
+            return res.status(200).json({ // 200 OK porque la contraseña se cambió, pero con advertencia
+                msg: `Contraseña actualizada, pero hubo un problema al enviar el correo de notificación a la empresa.`,
+                emailInfo: emailStatus // Incluir detalles del fallo del correo
+            });
+        }
+
+        // Si todo fue bien (contraseña cambiada Y correo enviado)
+        return res.status(200).json({
+            msg: `Nueva Contraseña generada, REVISA EL CORREO DE LA EMPRESA`,
+            emailInfo: emailStatus // Incluir detalles del éxito del correo
+        });
+
     } catch (error) {
-        console.log(error);
-        return res.status(500).json({msg: `Error del servidor`});
-        
+        //console.error("Error en recovery_pass_admin:", error); /
+        return res.status(500).json({
+            msg: `Error del servidor al recuperar contraseña`,
+            error: error.message,
+            emailInfo: emailStatus // Incluir estado del correo incluso en error general
+        });
     }
 }
 
