@@ -7,87 +7,120 @@ import mongoose from 'mongoose'
 
 //* Crear Ordenes
 const createOrder = async (req, res) => {
-    try {
-        const { customer, products, discountApplied, netTotal, totalWithTax } = req.body;
+    let stockUpdated = false; // Bandera para saber si el stock se modificó
+    let updateOperations = []; // Guardar las operaciones por si hay que revertir
 
-        // Validaciones iniciales
-        if (!customer || !products || !discountApplied || !netTotal || !totalWithTax) {
-            return res.status(400).json({ message: "Todos los campos son requeridos" });
+    try {
+        const { customer, products: inputProducts, discountApplied, netTotal, totalWithTax, comment } = req.body;
+
+        // --- Validaciones Iniciales ---
+        if (!customer || !inputProducts || !Array.isArray(inputProducts) || inputProducts.length === 0 || discountApplied == null || netTotal == null || totalWithTax == null) {
+            return res.status(400).json({ message: "Cliente, lista de productos (no vacía), descuento aplicado, total neto y total con impuesto son requeridos." });
         }
 
         if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
-            return res.status(400).json({ message: "Los valores numéricos deben ser positivos" });
+            return res.status(400).json({ message: "Los valores numéricos (descuento, totales) deben ser positivos." });
         }
 
-        const customerExists = await Clients.findOne({ Ruc: customer });
+        // Validar contenido de productos en la entrada
+        const productQuantities = {};
+        for (const product of inputProducts) {
+            if (!product.productId || !product.quantity || product.quantity <= 0) {
+                return res.status(400).json({ msg: `Cada producto debe tener 'productId' y 'quantity' (mayor que 0). Error en: ${JSON.stringify(product)}` });
+            }
+            const pId = parseInt(product.productId);
+            if (isNaN(pId)) {
+                return res.status(400).json({ msg: `El productId '${product.productId}' no es un número válido.` });
+            }
+            productQuantities[pId] = (productQuantities[pId] || 0) + product.quantity;
+        }
+        const productIds = Object.keys(productQuantities).map(Number);
 
+        // --- Operaciones ---
+
+        // 1. Verificar Cliente
+        const customerExists = await Clients.findOne({ Ruc: customer });
         if (!customerExists) {
             return res.status(404).json({ message: "Cliente no encontrado" });
         }
 
-        // Array para almacenar los productos verificados
-        const productsToUpdate = [];
+        // 2. Obtener Productos y Verificar Stock
+        const productsInDB = await Products.find({ id: { $in: productIds } });
+        const productsMap = productsInDB.reduce((map, p) => {
+            map[p.id] = p;
+            return map;
+        }, {});
 
-        // Verificación inicial de productos y stock
-        for (const product of products) {
-            console.log(`Verificando producto ID: ${product.productId}`);
-
-            // Convertir productId a número ya que en el modelo es type: Number
-            const productId = parseInt(product.productId);
-
-            const productInDB = await Products.findOne({ id: productId });
+        const bulkWriteOps = [];
+        updateOperations = []; // Limpiar/inicializar por si acaso
+        for (const productId of productIds) {
+            const productInDB = productsMap[productId];
+            const requestedQuantity = productQuantities[productId];
 
             if (!productInDB) {
-                return res.status(404).json({
-                    message: `Producto no encontrado: ${product.productId}`
-                });
+                return res.status(404).json({ message: `Producto con ID ${productId} no encontrado.` });
             }
 
-            console.log(`Stock actual del producto ${productId}: ${productInDB.stock}`);
-            console.log(`Cantidad solicitada: ${product.quantity}`);
-
-            if (productInDB.stock < product.quantity) {
+            // Verificación de stock antes de la operación 
+            if (productInDB.stock < requestedQuantity) {
                 return res.status(400).json({
-                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${product.quantity}`
+                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${requestedQuantity}`
                 });
             }
 
-            productsToUpdate.push({
-                id: productId,
-                quantity: product.quantity,
-                currentStock: productInDB.stock
-            });
+            const operation = {
+                updateOne: {
+                    // Añadir condición de stock para evitar conflictos
+                    filter: { id: productId, stock: { $gte: requestedQuantity } },
+                    update: { $inc: { stock: -requestedQuantity } }
+                }
+            };
+            bulkWriteOps.push(operation);
+            // Guardar la operación y la cantidad para posible reversión
+            updateOperations.push({ productId, quantity: requestedQuantity });
         }
 
-        // Actualización de stock
-        for (const product of productsToUpdate) {
-            console.log(`Actualizando stock del producto ${product.id}`);
-            console.log(`Stock antes de actualizar: ${product.currentStock}`);
-            console.log(`Cantidad a restar: ${product.quantity}`);
+        // 3. Actualizar Stock
+        if (bulkWriteOps.length > 0) {
+            const bulkResult = await Products.bulkWrite(bulkWriteOps);
+            console.log(`Resultado de bulkWrite de stock:`, bulkResult);
 
-            const result = await Products.findOneAndUpdate(
-                { id: product.id },
-                { $inc: { stock: -product.quantity } },
-                { new: true }
-            );
-
-            if (!result) {
-                throw new Error(`Error al actualizar el stock del producto ${product.id}`);
+            // Verificar si todas las operaciones esperadas modificaron el stock
+            if (bulkResult.modifiedCount !== bulkWriteOps.length) {
+                console.warn("Advertencia: No todas las operaciones de stock se completaron como se esperaba. Posible cambio de stock concurrente.");
+                // Considerar devolver un error si la consistencia es crítica
+                return res.status(409).json({ message: "Conflicto de stock al intentar actualizar. Inténtalo de nuevo." });
             }
-
-            console.log(`Stock después de actualizar: ${result.stock}`);
+            stockUpdated = true; // Marcar que el stock se actualizó
+            console.log(`Stock actualizado para ${bulkResult.modifiedCount} productos.`);
+        } else {
+            return res.status(400).json({ message: "No se prepararon operaciones de stock." });
         }
 
-        // Crear la orden
-        const newOrder = new Orders(req.body);
-        newOrder.seller = req.SellerBDD._id;
-        const savedDoc = await newOrder.save()
 
-        // Convertir a objeto plano y seleccionar los campos deseados para la respuesta
+        // 4. Crear la Orden
+        const newOrder = new Orders({
+            customer,
+            products: Object.entries(productQuantities).map(([pId, qty]) => ({
+                productId: pId,
+                quantity: qty
+            })),
+            discountApplied,
+            netTotal,
+            totalWithTax,
+            comment,
+            seller: req.SellerBDD._id
+        });
+        const savedDoc = await newOrder.save(); // Guardar la orden
+
+
+        // --- Fin de Operaciones ---
+
+        // Formatear respuesta
         const savedOrderResponse = {
             _id: savedDoc._id,
             customer: savedDoc.customer,
-            products: savedDoc.products.map(p => ({ // Asegurar formato de productos
+            products: savedDoc.products.map(p => ({
                 productId: p.productId,
                 quantity: p.quantity
             })),
@@ -96,24 +129,43 @@ const createOrder = async (req, res) => {
             totalWithTax: savedDoc.totalWithTax,
             status: savedDoc.status,
             comment: savedDoc.comment,
-            registrationDate: savedDoc.registrationDate, // Incluir fecha de registro
-            lastUpdate: savedDoc.lastUpdate,           // Incluir fecha de última actualización
-            seller: savedDoc.seller                   // Incluir ID del vendedor
-            // No incluir __v, createdAt, updatedAt u otros campos no deseados
+            registrationDate: savedDoc.registrationDate,
+            lastUpdate: savedDoc.lastUpdate,
+            seller: savedDoc.seller
         };
 
         res.status(201).json({
-            msg: "Orden creada con éxito",
-            savedOrderResponse
+            msg: "Orden creada con éxito y stock actualizado",
+            savedOrder: savedOrderResponse
         });
 
     } catch (error) {
         console.error('Error en createOrder:', error);
+
+        // Intentar revertir el stock si ya se había actualizado
+        if (stockUpdated && updateOperations.length > 0) {
+            console.warn("Error después de actualizar stock. Intentando revertir...");
+            const revertBulkOps = updateOperations.map(op => ({
+                updateOne: {
+                    filter: { id: op.productId },
+                    // Incrementar el stock para revertir la disminución
+                    update: { $inc: { stock: op.quantity } }
+                }
+            }));
+            try {
+                await Products.bulkWrite(revertBulkOps);
+                console.log("Reversión de stock completada.");
+            } catch (revertError) {
+                console.error("¡Error Crítico! Falló la reversión del stock:", revertError);
+            }
+        }
+
         res.status(500).json({
             message: "Error al registrar la orden",
-            error: error.message
+            detail: error.message // Cambiado 'error' a 'detail' para evitar confusión con el objeto Error
         });
     }
+    // No hay bloque finally necesario solo para la sesión
 }
 
 
@@ -122,7 +174,7 @@ const updateOrder = async (req, res) => {
     try {
         const { id } = req.params;
         // Renombrar 'products' de req.body para evitar confusión con la variable interna
-        const { products: newProductsData, discountApplied, netTotal, totalWithTax,comment } = req.body;
+        const { products: newProductsData, discountApplied, netTotal, totalWithTax, comment } = req.body;
 
         // --- Validaciones Iniciales ---
         if (!newProductsData || !discountApplied || !netTotal || !totalWithTax) {
@@ -241,7 +293,7 @@ const updateOrder = async (req, res) => {
             lastUpdate: new Date() // Actualizar fecha de modificación
         };
 
-        if(comment !== null){filteredUpdates.comment = comment;}
+        if (comment !== null) { filteredUpdates.comment = comment; }
         // Si no se quiere actualizar el comentario, no lo incluimos en filteredUpdates
 
         // 7. Actualizar el documento de la orden
@@ -329,52 +381,58 @@ const deleteOrder = async (req, res) => {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
+        // Solo permitir eliminar órdenes pendientes
         if (orderToDelete.status !== "Pendiente") {
-            return res.status(400).json({ message: "Lo sentimos, la orden ya fué procesada" });
+            return res.status(400).json({ message: "Lo sentimos, solo se pueden eliminar órdenes con estado 'Pendiente'" });
         }
 
-        // Reestablecer el stock de los productos relacionados
-        const productIds = orderToDelete.products.map(product => parseInt(product.productId));
-        const productsInDB = await Products.find({ id: { $in: productIds } });
-
-        // Crear un mapa para acceso rápido a los productos en la base de datos
-        const productsMap = productsInDB.reduce((acc, product) => {
-            acc[product.id] = product;
-            return acc;
+        // --- Preparar Restauración de Stock ---
+        const bulkStockRestoreOps = [];
+        const productIdsToFind = orderToDelete.products.map(p => parseInt(p.productId));
+        const productsInDB = await Products.find({ id: { $in: productIdsToFind } });
+        const productsMap = productsInDB.reduce((map, product) => {
+            map[product.id] = product;
+            return map;
         }, {});
 
         for (const product of orderToDelete.products) {
             const productId = parseInt(product.productId);
-
             const productInDB = productsMap[productId];
 
             if (productInDB) {
-                const result = await Products.findOneAndUpdate(
-                    { id: productId },
-                    { $inc: { stock: +product.quantity } },
-                    { new: true }
-                );
-
-                if (!result) {
-                    throw new Error(`Error al reestablecer el stock del producto ${productId}`);
-                }
-
-                console.log(`Producto ${productId} - Stock actualizado a ${result.stock}`);
+                bulkStockRestoreOps.push({
+                    updateOne: {
+                        filter: { id: productId },
+                        // Incrementar el stock con la cantidad del producto en la orden
+                        update: { $inc: { stock: product.quantity } }
+                    }
+                });
             } else {
-                return res.status(404).json({ message: `Producto no encontrado: ${productId}` });
+                // Opcional: Registrar si un producto de la orden ya no existe
+                console.warn(`Advertencia: Producto con ID ${productId} de la orden ${id} no encontrado en la colección de productos. No se restaurará su stock.`);
             }
         }
 
-        // Eliminar la orden de la base de datos
+        // --- Ejecutar Operaciones ---
+
+        // 1. Restaurar el stock (si hay operaciones)
+        if (bulkStockRestoreOps.length > 0) {
+            await Products.bulkWrite(bulkStockRestoreOps);
+            console.log(`Stock restaurado para ${bulkStockRestoreOps.length} tipos de productos de la orden ${id}.`);
+        }
+
+        // 2. Eliminar la orden de la base de datos
         await Orders.findByIdAndDelete(id);
 
         res.status(200).json({
             msg: "Orden eliminada con éxito y stock reestablecido"
         });
+
     } catch (error) {
         console.error('Error en deleteOrder:', error);
+        // Considerar si el error vino de bulkWrite o findByIdAndDelete para dar un mensaje más específico
         res.status(500).json({
-            message: "Error al eliminar orden",
+            message: "Error al eliminar la orden",
             error: error.message
         });
     }
@@ -385,90 +443,101 @@ const deleteOrder = async (req, res) => {
 
 const SeeAllOrders = async (req, res) => {
     try {
-        // Obtener todas las órdenes
-        const orders = await Orders.find();
+        // --- Paginación ---
+        const page = parseInt(req.query.page) || 1; // Página actual, default 1
+        const limit = parseInt(req.query.limit) || 10; // Órdenes por página, default 10
+        const skip = (page - 1) * limit; // Calcular cuántos documentos saltar
 
-        if (!orders || orders.length === 0) {
-            return res.status(404).json({ message: "No se encontraron órdenes" });
+        // Obtener el total de órdenes para calcular el total de páginas
+        const totalOrders = await Orders.countDocuments();
+
+        if (totalOrders === 0) {
+            return res.status(200).json({ // Cambiado a 200 OK, no es un error no tener órdenes
+                message: "No se encontraron órdenes",
+                orders: [],
+                currentPage: 1,
+                totalPages: 0,
+                totalOrders: 0
+            });
         }
 
-        // Obtener todos los RUCs de clientes y IDs de vendedores
+        // Calcular el total de páginas
+        const totalPages = Math.ceil(totalOrders / limit);
+
+        // Validar si la página solicitada existe
+        if (page > totalPages) {
+            return res.status(404).json({ message: `Página no encontrada. Solo hay ${totalPages} páginas.` });
+        }
+
+        // Obtener las órdenes para la página actual, ordenadas por fecha de registro descendente
+        const orders = await Orders.find()
+            .sort({ registrationDate: -1 }) // Ordenar por más reciente primero
+            .skip(skip)
+            .limit(limit);
+
+        // --- Obtener Detalles Relacionados (Solo para la página actual) ---
+
+        // Obtener RUCs de clientes y IDs de vendedores únicos de las órdenes de esta página
         const customerRUCs = [...new Set(orders.map(order => order.customer))];
         const sellerIds = [...new Set(orders.map(order => order.seller))];
+        // Obtener IDs de productos únicos de las órdenes de esta página
+        const productIds = [...new Set(orders.flatMap(order =>
+            order.products.map(product => parseInt(product.productId))
+        ))];
 
-        // Consultar detalles de clientes y vendedores
-        const clients = await Clients.find({ Ruc: { $in: customerRUCs } });
-        const sellers = await Sellers.find({ _id: { $in: sellerIds } });
+        // Consultar detalles de clientes, vendedores y productos para esta página
+        // Usar Promise.all para ejecutar consultas en paralelo
+        const [clients, sellers, products] = await Promise.all([
+            Clients.find({ Ruc: { $in: customerRUCs } }).select("Name Ruc Address telephone email credit state"), // Seleccionar campos
+            Sellers.find({ _id: { $in: sellerIds } }).select("names lastNames numberID email SalesCity PhoneNumber"), // Seleccionar campos
+            Products.find({ id: { $in: productIds } }).select("id product_name measure price") // Seleccionar campos (incluir 'id' para el mapeo)
+        ]);
 
-        // Crear mapas para acceso rápido con los campos especificados
+
+        // Crear mapas para acceso rápido
         const clientMap = clients.reduce((map, client) => {
-            map[client.Ruc] = {
-                _id: client._id,
-                Name: client.Name,
-                Ruc: client.Ruc,
-                Address: client.Address,
-                telephone: client.telephone,
-                email: client.email,
-                credit: client.credit,
-                state: client.state
-            };
+            map[client.Ruc] = client.toObject(); // Convertir a objeto plano
             return map;
         }, {});
 
         const sellerMap = sellers.reduce((map, seller) => {
-            map[seller._id.toString()] = {
-                _id: seller._id,
-                names: seller.names,
-                lastNames: seller.lastNames,
-                numberID: seller.numberID,
-                email: seller.email,
-                SalesCity: seller.SalesCity,
-                PhoneNumber: seller.PhoneNumber,
-                role: seller.role,
-                username: seller.username
-            };
+            map[seller._id.toString()] = seller.toObject(); // Convertir a objeto plano
             return map;
         }, {});
 
-        // Obtener todos los productId de las órdenes
-        const productIds = orders.flatMap(order =>
-            order.products.map(product => parseInt(product.productId))
-        );
-
-        // Consultar los detalles de los productos en la base de datos
-        const products = await Products.find({ id: { $in: productIds } });
-
-        // Crear un mapa de productos para acceso rápido
         const productMap = products.reduce((map, product) => {
-            map[product.id] = {
-                _id: product._id,
-                product_name: product.product_name,
-                measure: product.measure,
-                price: product.price
-            };
+            map[product.id] = product.toObject(); // Usar 'id' numérico como clave, convertir a objeto plano
             return map;
         }, {});
 
         // Formatear las órdenes con la información requerida
         const formattedOrders = orders.map(order => ({
             _id: order._id,
-            customer: clientMap[order.customer] || null,
+            // Usar .toObject() para obtener un objeto plano de la orden antes de modificarlo
+            ...order.toObject(), // Incluir otros campos de la orden si es necesario
+            customer: clientMap[order.customer] || null, // Usar el mapa de clientes
+            seller: sellerMap[order.seller.toString()] || null, // Usar el mapa de vendedores
             products: order.products.map(p => ({
                 productId: p.productId,
                 quantity: p.quantity,
+                // Buscar detalles del producto en el mapa usando el ID numérico
                 productDetails: productMap[parseInt(p.productId)] || null
-            })),
-            discountApplied: order.discountApplied,
-            netTotal: order.netTotal,
-            totalWithTax: order.totalWithTax,
-            status: order.status,
-            comment: order.comment,
-            seller: sellerMap[order.seller.toString()] || null
+            }))
+            // Eliminar campos no deseados si es necesario después de ...order.toObject()
+            // delete formattedOrder.__v;
         }));
 
-        res.status(200).json(formattedOrders);
+        // --- Respuesta Paginada ---
+        res.status(200).json({
+            orders: formattedOrders,
+            currentPage: page,
+            totalPages: totalPages,
+            totalOrders: totalOrders,
+            limit: limit
+        });
+
     } catch (error) {
-        console.error("Error en getOrdersWithDetails: ", error);
+        console.error("Error en SeeAllOrders: ", error);
         res.status(500).json({
             message: "Error al obtener las órdenes con detalles",
             error: error.message
@@ -480,97 +549,83 @@ const SeeAllOrders = async (req, res) => {
 
 const SeeOrderById = async (req, res) => {
     try {
-        // Obtener el ID de la orden desde los parámetros de la solicitud
         const { id } = req.params;
 
-        // Validar que el ID sea un ObjectId válido de MongoDB
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(404).json({
                 msg: `No existe la orden con el id ${id}. Ingrese un ID válido.`
             });
         }
 
-        // Buscar la orden por su ID
-        const order = await Orders.findById(id);
+        // 1. Buscar la orden principal y obtenerla como objeto plano
+        const order = await Orders.findById(id).lean(); // Usar lean() para obtener objeto plano
 
-        // Si no se encuentra la orden, retornar error 404
         if (!order) {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
 
-        // Obtener el RUC del cliente y el ID del vendedor de la orden
+        // 2. Obtener IDs relacionados
         const customerRuc = order.customer;
         const sellerId = order.seller;
-
-        // Consultar detalles del cliente y vendedor
-        const client = await Clients.findOne({ Ruc: customerRuc });
-        const seller = await Sellers.findById(sellerId);
-
-        // Obtener los IDs de los productos en la orden
+        // Asegurarse de que productIds sean números para la consulta
         const productIds = order.products.map(product => parseInt(product.productId));
 
-        // Consultar los detalles de los productos en la base de datos
-        const products = await Products.find({ id: { $in: productIds } });
+        // 3. Consultar detalles relacionados en paralelo y obtener objetos planos
+        const [clientDetails, sellerDetails, productsDetails] = await Promise.all([
+            Clients.findOne({ Ruc: customerRuc })
+                .select("Name Ruc Address telephone email credit state") // Seleccionar campos necesarios
+                .lean(), // Obtener objeto plano
+            Sellers.findById(sellerId)
+                .select("names lastNames numberID email SalesCity PhoneNumber") // Seleccionar campos necesarios
+                .lean(), // Obtener objeto plano
+            // Asegurarse de que la consulta use los IDs numéricos
+            Products.find({ id: { $in: productIds } })
+                .select("id product_name measure price") // Seleccionar campos necesarios (incluir 'id' para mapeo)
+                .lean() // Obtener objetos planos
+        ]);
 
-        // Crear mapas para cliente, vendedor y productos
-        const clientDetails = client
-            ? {
-                _id: client._id,
-                Name: client.Name,
-                Ruc: client.Ruc,
-                Address: client.Address,
-                telephone: client.telephone,
-                email: client.email,
-                credit: client.credit,
-                state: client.state
-            }
-            : null;
-
-        const sellerDetails = seller
-            ? {
-                _id: seller._id,
-                names: seller.names,
-                lastNames: seller.lastNames,
-                numberID: seller.numberID,
-                email: seller.email,
-                SalesCity: seller.SalesCity,
-                PhoneNumber: seller.PhoneNumber,
-                role: seller.role,
-                username: seller.username
-            }
-            : null;
-
-        const productMap = products.reduce((map, product) => {
-            map[product.id] = {
-                _id: product._id,
-                product_name: product.product_name,
-                measure: product.measure,
-                price: product.price
-            };
+        // 4. Crear mapa de productos (si se encontraron productos)
+        const productMap = productsDetails ? productsDetails.reduce((map, product) => {
+            // Usar el campo 'id' numérico como clave
+            map[product.id] = product; // Ya es un objeto plano
             return map;
-        }, {});
+        }, {}) : {};
 
-        // Formatear la orden con la información requerida
+        // 5. Formatear la orden final (order ya es un objeto plano)
         const formattedOrder = {
             _id: order._id,
-            customer: clientDetails,
-            products: order.products.map(p => ({
-                productId: p.productId,
-                quantity: p.quantity,
-                productDetails: productMap[parseInt(p.productId)] || null
-            })),
+            customer: clientDetails, // Asignar directamente (ya es objeto plano o null)
+            products: order.products.map(p => {
+                const productIdNum = parseInt(p.productId); // Convertir a número para buscar en el mapa
+                return {
+                    productId: p.productId, // Mantener el string original si se prefiere
+                    quantity: p.quantity,
+                    // Buscar usando el ID numérico
+                    productDetails: productMap[productIdNum] || null
+                };
+            }),
             discountApplied: order.discountApplied,
             netTotal: order.netTotal,
             totalWithTax: order.totalWithTax,
             status: order.status,
             comment: order.comment,
-            seller: sellerDetails
+            seller: sellerDetails, // Asignar directamente (ya es objeto plano o null)
+            // Incluir fechas si son necesarias en la respuesta
+            registrationDate: order.registrationDate,
+            lastUpdate: order.lastUpdate
         };
 
-        // Enviar la respuesta con la orden formateada
+        // Eliminar campos que no se quieran explícitamente (si .lean() trajo alguno extra)
+        // delete formattedOrder.__v; // Ejemplo
+
         res.status(200).json(formattedOrder);
+
     } catch (error) {
         console.error("Error en SeeOrderById: ", error);
+        // Manejar CastError específicamente si findById falla por ID inválido (aunque ya validado)
+        if (error.name === 'CastError') {
+            return res.status(400).json({ message: "ID de orden inválido." });
+        }
         res.status(500).json({
             message: "Error al obtener los detalles de la orden",
             error: error.message
