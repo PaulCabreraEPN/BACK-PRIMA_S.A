@@ -1,6 +1,6 @@
 import nodemailer from 'nodemailer'
 import dotenv from 'dotenv'
-import { passwordGeneratorbyAdmin } from '../helpers/passwordGenerator.js';
+
 
 dotenv.config()
 
@@ -15,7 +15,8 @@ let transporter = nodemailer.createTransport({
     }
 });
 
-const SendMailCredentials = (userMail, name, username, password, token) => {
+// Modificada para usar async/await y retornar estado/error
+const SendMailCredentials = async (userMail, name, username, password, token) => {
     let mailOptions = {
         from: process.env.USER_MAILTRAP,
         to: userMail,
@@ -59,74 +60,92 @@ const SendMailCredentials = (userMail, name, username, password, token) => {
         `
     }
 
-    transporter.sendMail(mailOptions, function(error, info){
-        if (error) {
-            console.log(error);
-        } else {
-            console.log('email sent: ' + info.response);
-        }
-    });
+    try {
+        const info = await transporter.sendMail(mailOptions);
+        // En lugar de loggear, retornamos éxito
+        return { success: true, message: `Email de credenciales enviado a ${userMail}`, info: info.response };
+    } catch (error) {
+        // En lugar de loggear, retornamos fallo
+        console.error(`Error enviando credenciales a ${userMail}:`, error); // Mantenemos log de error en servidor
+        return { success: false, message: `Error al enviar email de credenciales a ${userMail}`, error: error };
+    }
 }
 
+// Modificada para usar try/catch y retornar estado/error
 const sendMailToRecoveryPassword = async(username, password)=>{
-    let info = await transporter.sendMail({
-    from: process.env.USER_MAILTRAP,
-    to: process.env.ADMIN_MAILTRAP,
-    subject: "Correo para reestablecer tu contraseña",
-    html: `
-    <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
-        <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
-            <div style="text-align: center; margin-bottom: 20px;">
-                <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
-                <h2 style="color: #004ba0;">Recuperación de Contraseña</h2>
-            </div>
-            <p style="color: #333;">Hola <strong>${username}</strong>,</p>
-            <p style="color: #333;">Hemos recibido una solicitud para restablecer tu contraseña. A continuación, encontrarás tu nueva contraseña:</p>
-            <div style="background: #f9f9f9; padding: 15px; border: 1px solid #eee; border-radius: 5px; text-align: center;">
-                <p style="color: #004ba0; font-size: 1.2em;"><strong>Contraseña:</strong> ${password}</p>
-            </div>
-            <p style="color: #333;">Si no solicitaste este cambio, notifícalo por este medio.</p>
-            <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
-            <p style="text-align: center; margin-top: 20px; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
-        </div>
-    </body>
-    `
-    });
-    console.log("Mensaje enviado satisfactoriamente: ", info.messageId);
-}
-
-const sendMailToVerifyEmail = async(email, token) => {
-    let info = await transporter.sendMail({
-        from: process.env.USER_MAILTRAP,
-        to: email,
-        subject: "Cambiar contraseña en cuenta PRIMA S.A.",
-        html: `
-        <html>
+    try {
+        let info = await transporter.sendMail({
+            from: process.env.USER_MAILTRAP,
+            to: process.env.ADMIN_MAILTRAP, // Considera si esto debería ir al email del usuario real
+            subject: "Correo para reestablecer tu contraseña",
+            html: `
             <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
                 <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
                     <div style="text-align: center; margin-bottom: 20px;">
                         <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
-                        <h2 style="color: #004ba0;">Autentificación de cuenta</h2>
+                        <h2 style="color: #004ba0;">Recuperación de Contraseña</h2>
                     </div>
-                    <p style="color: #333;">Hola,</p>
-                    <p style="color: #333;">Hemos recibido una solicitud de cambio de contraseña para tu cuenta en PRIMA S.A.</p>
-                    <p style="color: #333;">Por favor, haz click en el siguiente botón para continuar:</p>
-                    <p style="text-align: center;">
-                        <a href="${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Cambiar contraseña</a>
-                    </p>
-                    <p style="color: #333;">En caso de no haber realizado la solicitud, puede ignorar este mensaje.</p>
-                    <p style="color: #333;">Si tiene problemas con el botón, copia y pega el siguiente enlace en tu navegador:</p>
-                    <p style="word-break: break-all; color: #004ba0;">
-                        ${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}
-                    </p>
+                    <p style="color: #333;">Hola <strong>${username}</strong>,</p>
+                    <p style="color: #333;">Hemos recibido una solicitud para restablecer tu contraseña. A continuación, encontrarás tu nueva contraseña:</p>
+                    <div style="background: #f9f9f9; padding: 15px; border: 1px solid #eee; border-radius: 5px; text-align: center;">
+                        <p style="color: #004ba0; font-size: 1.2em;"><strong>Contraseña:</strong> ${password}</p>
+                    </div>
+                    <p style="color: #333;">Si no solicitaste este cambio, notifícalo por este medio.</p>
                     <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
-                    <p style="text-align: center; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
+                    <p style="text-align: center; margin-top: 20px; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
                 </div>
             </body>
-        </html>
-        `
-    });
-    console.log("Mensaje de verificación enviado satisfactoriamente: ", info.messageId);
+            `
+        });
+        // En lugar de loggear, retornamos éxito
+        return { success: true, message: `Email de recuperación enviado para ${username}`, info: info.messageId };
+    } catch (error) {
+        // En lugar de loggear, retornamos fallo
+        console.error(`Error enviando email de recuperación para ${username}:`, error); // Mantenemos log de error en servidor
+        return { success: false, message: `Error al enviar email de recuperación para ${username}`, error: error };
+    }
+}
+
+// Modificada para usar try/catch y retornar estado/error
+const sendMailToVerifyEmail = async(email, token) => {
+    try {
+        let info = await transporter.sendMail({
+            from: process.env.USER_MAILTRAP,
+            to: email,
+            subject: "Cambiar contraseña en cuenta PRIMA S.A.",
+            html: `
+            <html>
+                <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
+                    <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                        <div style="text-align: center; margin-bottom: 20px;">
+                            <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
+                            <h2 style="color: #004ba0;">Autentificación de cuenta</h2>
+                        </div>
+                        <p style="color: #333;">Hola,</p>
+                        <p style="color: #333;">Hemos recibido una solicitud de cambio de contraseña para tu cuenta en PRIMA S.A.</p>
+                        <p style="color: #333;">Por favor, haz click en el siguiente botón para continuar:</p>
+                        <p style="text-align: center;">
+                            <a href="${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Cambiar contraseña</a>
+                        </p>
+                        <p style="color: #333;">En caso de no haber realizado la solicitud, puede ignorar este mensaje.</p>
+                        <p style="color: #333;">Si tiene problemas con el botón, copia y pega el siguiente enlace en tu navegador:</p>
+                        <p style="word-break: break-all; color: #004ba0;">
+                            ${process.env.URL_BACK}/recovery-password/${encodeURIComponent(token)}
+                        </p>
+                        <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
+                        <p style="text-align: center; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
+                    </div>
+                </body>
+            </html>
+            `
+        });
+        // En lugar de loggear, retornamos éxito
+        return { success: true, message: `Email de verificación enviado a ${email}`, info: info.messageId };
+    } catch (error) {
+        // En lugar de loggear, retornamos fallo
+        console.error(`Error enviando email de verificación a ${email}:`, error); // Mantenemos log de error en servidor
+        return { success: false, message: `Error al enviar email de verificación a ${email}`, error: error };
+    }
 }
 
 
