@@ -4,11 +4,11 @@ import Sellers from '../models/sellers.js'
 import Products from '../models/products.js'
 import mongoose from 'mongoose'
 
-
 //* Crear Ordenes
 const createOrder = async (req, res) => {
     let stockUpdated = false; // Bandera para saber si el stock se modificó
     let updateOperations = []; // Guardar las operaciones por si hay que revertir
+    let stockUpdateDetails = {}; // Para guardar detalles de la actualización de stock
 
     try {
         const { customer, products: inputProducts, discountApplied, netTotal, totalWithTax, comment } = req.body;
@@ -61,7 +61,7 @@ const createOrder = async (req, res) => {
                 return res.status(404).json({ message: `Producto con ID ${productId} no encontrado.` });
             }
 
-            // Verificación de stock antes de la operación 
+            // Verificación de stock antes de la operación
             if (productInDB.stock < requestedQuantity) {
                 return res.status(400).json({
                     message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${requestedQuantity}`
@@ -83,22 +83,44 @@ const createOrder = async (req, res) => {
         // 3. Actualizar Stock
         if (bulkWriteOps.length > 0) {
             const bulkResult = await Products.bulkWrite(bulkWriteOps);
-            console.log(`Resultado de bulkWrite de stock:`, bulkResult);
+            stockUpdateDetails.attempted = bulkWriteOps.length; // Operaciones intentadas
+            stockUpdateDetails.modified = bulkResult.modifiedCount; // Operaciones exitosas
 
             // Verificar si todas las operaciones esperadas modificaron el stock
             if (bulkResult.modifiedCount !== bulkWriteOps.length) {
-                console.warn("Advertencia: No todas las operaciones de stock se completaron como se esperaba. Posible cambio de stock concurrente.");
-                // Considerar devolver un error si la consistencia es crítica
-                return res.status(409).json({ message: "Conflicto de stock al intentar actualizar. Inténtalo de nuevo." });
+                stockUpdateDetails.status = "Conflicto";
+                stockUpdateDetails.message = `Conflicto de stock: Se intentaron actualizar ${bulkWriteOps.length} productos, pero solo ${bulkResult.modifiedCount} se modificaron. Inténtalo de nuevo.`;
+                // Intentar revertir lo que se pudo haber modificado 
+                const revertPartialOps = updateOperations.slice(0, bulkResult.modifiedCount).map(op => ({ // Solo revertir las que potencialmente se modificaron
+                    updateOne: {
+                        filter: { id: op.productId },
+                        update: { $inc: { stock: op.quantity } }
+                    }
+                }));
+                if (revertPartialOps.length > 0) {
+                    try {
+                        await Products.bulkWrite(revertPartialOps);
+                        stockUpdateDetails.reversion = "Intento de reversión parcial realizado.";
+                    } catch (revertError) {
+                        stockUpdateDetails.reversion = `Error crítico al intentar reversión parcial: ${revertError.message}`;
+                    }
+                }
+                return res.status(409).json({
+                    message: stockUpdateDetails.message,
+                    details: stockUpdateDetails
+                });
             }
-            stockUpdated = true; // Marcar que el stock se actualizó
-            console.log(`Stock actualizado para ${bulkResult.modifiedCount} productos.`);
+            stockUpdated = true; // Marcar que el stock se actualizó correctamente
+            stockUpdateDetails.status = "Éxito";
+            stockUpdateDetails.message = `Stock actualizado para ${bulkResult.modifiedCount} productos.`;
         } else {
-            return res.status(400).json({ message: "No se prepararon operaciones de stock." });
+            // Esto no debería ocurrir si las validaciones iniciales son correctas,
+            // pero se mantiene por seguridad.
+            return res.status(400).json({ message: "No se prepararon operaciones de stock válidas." });
         }
 
 
-        // 4. Crear la Orden
+        // 4. Crear la Orden (Solo si la actualización de stock fue exitosa)
         const newOrder = new Orders({
             customer,
             products: Object.entries(productQuantities).map(([pId, qty]) => ({
@@ -134,17 +156,23 @@ const createOrder = async (req, res) => {
             seller: savedDoc.seller
         };
 
+        // Incluir detalles de la actualización de stock en la respuesta exitosa
         res.status(201).json({
             msg: "Orden creada con éxito y stock actualizado",
-            savedOrder: savedOrderResponse
+            savedOrder: savedOrderResponse,
+            stockUpdateInfo: stockUpdateDetails // Añadir la información aquí
         });
 
     } catch (error) {
-        console.error('Error en createOrder:', error);
+        let errorDetails = {
+            message: "Error al registrar la orden",
+            detail: error.message,
+            reversionStatus: "No aplica o falló"
+        };
 
-        // Intentar revertir el stock si ya se había actualizado
+        // Intentar revertir el stock si ya se había actualizado (error ocurrió DESPUÉS de actualizar stock)
         if (stockUpdated && updateOperations.length > 0) {
-            console.warn("Error después de actualizar stock. Intentando revertir...");
+            errorDetails.reversionStatus = "Intentando revertir stock...";
             const revertBulkOps = updateOperations.map(op => ({
                 updateOne: {
                     filter: { id: op.productId },
@@ -153,229 +181,355 @@ const createOrder = async (req, res) => {
                 }
             }));
             try {
-                await Products.bulkWrite(revertBulkOps);
-                console.log("Reversión de stock completada.");
+                const revertResult = await Products.bulkWrite(revertBulkOps);
+                errorDetails.reversionStatus = `Reversión de stock completada para ${revertResult.modifiedCount} productos.`;
             } catch (revertError) {
+                errorDetails.reversionStatus = `¡Error Crítico! Falló la reversión del stock: ${revertError.message}`;
+                // Loggear este error crítico internamente es importante
                 console.error("¡Error Crítico! Falló la reversión del stock:", revertError);
             }
+        } else if (stockUpdateDetails.status === "Conflicto") {
+            errorDetails.reversionStatus = stockUpdateDetails.reversion || "Reversión manejada en conflicto de stock.";
+
+        } else {
+            errorDetails.reversionStatus = "No se requirió reversión de stock (fallo antes de la actualización).";
         }
-
-        res.status(500).json({
-            message: "Error al registrar la orden",
-            detail: error.message // Cambiado 'error' a 'detail' para evitar confusión con el objeto Error
-        });
+        // Enviar respuesta de error 500
+        res.status(500).json(errorDetails);
     }
-    // No hay bloque finally necesario solo para la sesión
 }
-
 
 //* Actualizar Orden
 const updateOrder = async (req, res) => {
+    let stockAdjusted = false; // Bandera para saber si el stock se ajustó
+    let stockAdjustmentOps = []; // Guardar las operaciones de ajuste de stock para posible reversión
+    let stockUpdateDetails = {}; // Para guardar detalles del ajuste de stock
+
     try {
         const { id } = req.params;
-        // Renombrar 'products' de req.body para evitar confusión con la variable interna
         const { products: newProductsData, discountApplied, netTotal, totalWithTax, comment } = req.body;
 
         // --- Validaciones Iniciales ---
-        if (!newProductsData || !discountApplied || !netTotal || !totalWithTax) {
-            return res.status(400).json({ msg: "Lo sentimos, debes llenar todos los campos requeridos (products, discountApplied, netTotal, totalWithTax)" });
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "ID de orden inválido." });
         }
-        // Validar que products sea un array
-        if (!Array.isArray(newProductsData)) {
-            return res.status(400).json({ msg: "El campo 'products' debe ser un array." });
+        if (!newProductsData || !Array.isArray(newProductsData) || discountApplied == null || netTotal == null || totalWithTax == null) {
+            return res.status(400).json({ msg: "Campos requeridos: products (array), discountApplied, netTotal, totalWithTax." });
         }
-        // Validar contenido de products
+        if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
+            return res.status(400).json({ message: "Los valores numéricos (discountApplied, netTotal, totalWithTax) deben ser positivos." });
+        }
+        const productQuantities = {}; // Para validar y consolidar cantidades
         for (const product of newProductsData) {
             if (!product.productId || product.quantity == null || product.quantity <= 0) {
-                return res.status(400).json({ msg: "Cada producto debe tener 'productId' y 'quantity' (mayor que 0)." });
+                return res.status(400).json({ msg: `Cada producto debe tener 'productId' y 'quantity' (mayor que 0). Error en: ${JSON.stringify(product)}` });
             }
+            const pId = parseInt(product.productId);
+            if (isNaN(pId)) {
+                return res.status(400).json({ msg: `El productId '${product.productId}' no es un número válido.` });
+            }
+            productQuantities[pId] = (productQuantities[pId] || 0) + product.quantity;
         }
 
-        if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
-            return res.status(400).json({ message: "Los valores numéricos (discountApplied, netTotal, totalWithTax) deben ser positivos" });
-        }
-
+        // --- Obtener Orden Original ---
         const orderToUpdate = await Orders.findById(id);
-
         if (!orderToUpdate) {
             return res.status(404).json({ message: "Orden no encontrada" });
         }
-
         if (orderToUpdate.status !== "Pendiente") {
             return res.status(400).json({ message: "El pedido ya no se puede actualizar porque su estado no es 'Pendiente'" });
         }
 
         // --- Lógica de Actualización de Stock ---
 
-        // 1. Crear mapas de cantidades antiguas y nuevas
+        // 1. Crear mapas de cantidades antiguas y nuevas (usando las consolidadas)
         const oldQuantities = orderToUpdate.products.reduce((map, p) => {
             map[parseInt(p.productId)] = p.quantity;
             return map;
         }, {});
-        const newQuantities = newProductsData.reduce((map, p) => {
-            // Sumar cantidades si el mismo productId aparece varias veces en la entrada
-            const pId = parseInt(p.productId);
-            map[pId] = (map[pId] || 0) + p.quantity;
-            return map;
-        }, {});
+        // newQuantities ya está consolidado desde la validación
 
-        // 2. Obtener todos los IDs de productos involucrados (antiguos y nuevos)
+        // 2. Obtener todos los IDs de productos involucrados
         const allInvolvedProductIds = Array.from(new Set([
             ...Object.keys(oldQuantities).map(Number),
-            ...Object.keys(newQuantities).map(Number)
+            ...Object.keys(productQuantities).map(Number) // Usar productQuantities
         ]));
 
-        // 3. Obtener el estado actual de los productos desde la BD
+        // 3. Obtener estado actual de productos desde BD
         const productsInDB = await Products.find({ id: { $in: allInvolvedProductIds } });
         const productsMap = productsInDB.reduce((acc, product) => {
-            acc[product.id] = product; // Guardar el documento completo del producto
+            acc[product.id] = product;
             return acc;
         }, {});
 
-        // 4. Calcular el cambio neto de stock para cada producto y verificar disponibilidad
-        const stockChanges = {}; // { productId: netChange }
-        const bulkWriteOps = [];
+        // 4. Calcular cambio neto y preparar operaciones bulk
+        const bulkStockAdjustOps = [];
+        stockAdjustmentOps = []; // Limpiar/inicializar
 
         for (const productId of allInvolvedProductIds) {
             const productInDB = productsMap[productId];
-
-            // Verificar si el producto existe en la BD (importante si se añade uno nuevo)
-            if (!productInDB && newQuantities[productId] > 0) {
-                return res.status(404).json({ message: `Producto con ID ${productId} no encontrado en la base de datos.` });
-            }
-            // Si el producto solo estaba en la orden original y no en la BD (caso raro), no hacer nada con su stock
-            if (!productInDB) continue;
-
-
             const oldQty = oldQuantities[productId] || 0;
-            const newQty = newQuantities[productId] || 0;
+            const newQty = productQuantities[productId] || 0; // Usar productQuantities
             const netChange = oldQty - newQty; // Positivo = devolver stock, Negativo = quitar stock
 
-            if (netChange !== 0) {
-                // Verificar si hay suficiente stock *antes* de preparar la operación
-                // El stock final será: productInDB.stock + netChange
-                if (productInDB.stock + netChange < 0) {
-                    return res.status(400).json({
-                        message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, se intentarían quitar ${-netChange} unidades.`
-                    });
-                }
-                // Añadir operación al bulkWrite
-                bulkWriteOps.push({
-                    updateOne: {
-                        filter: { id: productId },
-                        update: { $inc: { stock: netChange } }
-                    }
+            // Si se añade un producto que no existe en BD
+            if (!productInDB && newQty > 0) {
+                return res.status(404).json({ message: `Producto con ID ${productId} no encontrado en la base de datos.` });
+            }
+            // Si el producto solo estaba en la orden original y no en la BD, o si no hay cambio neto
+            if (!productInDB || netChange === 0) continue;
+
+            // Verificar si hay suficiente stock *después* del cambio neto
+            // Si netChange es negativo (quitar stock), verificar si hay suficiente
+            if (netChange < 0 && productInDB.stock < Math.abs(netChange)) {
+                return res.status(400).json({
+                    message: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, se intentarían quitar ${Math.abs(netChange)} unidades adicionales.`
                 });
             }
+
+            // Añadir operación al bulkWrite y guardar para posible reversión
+            const operation = {
+                updateOne: {
+                    // Añadir condición de stock >= 0 para seguridad, aunque ya validamos antes
+                    filter: { id: productId, stock: { $gte: (netChange < 0 ? Math.abs(netChange) : 0) } },
+                    update: { $inc: { stock: netChange } }
+                }
+            };
+            bulkStockAdjustOps.push(operation);
+            stockAdjustmentOps.push({ productId, netChange }); // Guardar el cambio neto
         }
 
         // --- Ejecutar Actualizaciones ---
 
         // 5. Aplicar cambios de stock en la BD (si hay cambios)
-        if (bulkWriteOps.length > 0) {
-            await Products.bulkWrite(bulkWriteOps);
-            console.log(`Stock actualizado para ${bulkWriteOps.length} productos.`);
+        if (bulkStockAdjustOps.length > 0) {
+            const bulkResult = await Products.bulkWrite(bulkStockAdjustOps);
+            stockUpdateDetails.attempted = bulkStockAdjustOps.length;
+            stockUpdateDetails.modified = bulkResult.modifiedCount;
+
+            if (bulkResult.modifiedCount !== bulkStockAdjustOps.length) {
+                stockUpdateDetails.status = "Conflicto";
+                stockUpdateDetails.message = `Conflicto al ajustar stock: Se intentaron ${bulkStockAdjustOps.length} ajustes, pero solo ${bulkResult.modifiedCount} se completaron. Cambios revertidos.`;
+
+                // Intentar revertir TODOS los ajustes intentados en esta operación
+                const revertOps = stockAdjustmentOps.map(op => ({
+                    updateOne: {
+                        filter: { id: op.productId },
+                        update: { $inc: { stock: -op.netChange } } // Revertir el cambio neto
+                    }
+                }));
+                try {
+                    await Products.bulkWrite(revertOps);
+                    stockUpdateDetails.reversion = "Intento de reversión completa realizado.";
+                } catch (revertError) {
+                    stockUpdateDetails.reversion = `Error crítico al intentar reversión completa: ${revertError.message}`;
+                    console.error("¡Error Crítico! Falló la reversión del stock en conflicto de updateOrder:", revertError);
+                }
+                return res.status(409).json({
+                    message: stockUpdateDetails.message,
+                    details: stockUpdateDetails
+                });
+            }
+            stockAdjusted = true; // Marcar que el stock se ajustó correctamente
+            stockUpdateDetails.status = "Éxito";
+            stockUpdateDetails.message = `Stock ajustado para ${bulkResult.modifiedCount} productos.`;
+        } else {
+            stockUpdateDetails.status = "Sin cambios";
+            stockUpdateDetails.message = "No se requirieron ajustes de stock.";
         }
 
         // 6. Preparar los datos para actualizar la orden
-        // Usar los datos validados y procesados de newQuantities para asegurar consistencia
-        const finalProductsArray = Object.entries(newQuantities).map(([productId, quantity]) => ({
-            productId: productId, // Asegurarse que sea string si el modelo lo espera así, o number si no. Asumiendo number basado en parseInt.
+        const finalProductsArray = Object.entries(productQuantities).map(([productId, quantity]) => ({
+            productId: productId, // Mantener como string o number según el modelo
             quantity: quantity
         }));
 
-
         const filteredUpdates = {
-            products: finalProductsArray, // Usar el array final procesado
+            products: finalProductsArray,
             discountApplied: discountApplied,
             netTotal: netTotal,
             totalWithTax: totalWithTax,
-            lastUpdate: new Date() // Actualizar fecha de modificación
+            lastUpdate: new Date()
         };
-
-        if (comment !== null) { filteredUpdates.comment = comment; }
-        // Si no se quiere actualizar el comentario, no lo incluimos en filteredUpdates
+        if (comment !== undefined) { // Permitir actualizar a comentario vacío ""
+            filteredUpdates.comment = comment;
+        }
 
         // 7. Actualizar el documento de la orden
-        const updatedOrder = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true }).lean().select("-__v -createdAt -updatedAt");
+        const updatedOrderDoc = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true });
+
+        // Formatear respuesta (similar a createOrder)
+        const updatedOrderResponse = {
+            _id: updatedOrderDoc._id,
+            customer: updatedOrderDoc.customer,
+            products: updatedOrderDoc.products.map(p => ({
+                productId: p.productId,
+                quantity: p.quantity
+            })),
+            discountApplied: updatedOrderDoc.discountApplied,
+            netTotal: updatedOrderDoc.netTotal,
+            totalWithTax: updatedOrderDoc.totalWithTax,
+            status: updatedOrderDoc.status,
+            comment: updatedOrderDoc.comment,
+            registrationDate: updatedOrderDoc.registrationDate,
+            lastUpdate: updatedOrderDoc.lastUpdate,
+            seller: updatedOrderDoc.seller
+        };
+
 
         res.status(200).json({
-            msg: "Orden actualizada con éxito y stock ajustado",
-            updatedOrder
+            msg: "Orden actualizada con éxito",
+            updatedOrder: updatedOrderResponse,
+            stockUpdateInfo: stockUpdateDetails // Incluir detalles del stock
         });
 
     } catch (error) {
-        console.error('Error en updateOrder: ', error);
-        // Detectar errores específicos si es posible (ej. CastError de Mongoose)
-        if (error.name === 'CastError') {
-            return res.status(400).json({ message: "ID de orden inválido." });
+        let errorDetails = {
+            message: "Error al actualizar la orden",
+            detail: error.message,
+            reversionStatus: "No aplica o falló"
+        };
+
+        // Intentar revertir el stock si ya se había ajustado
+        if (stockAdjusted && stockAdjustmentOps.length > 0) {
+            errorDetails.reversionStatus = "Intentando revertir ajuste de stock...";
+            const revertBulkOps = stockAdjustmentOps.map(op => ({
+                updateOne: {
+                    filter: { id: op.productId },
+                    // Revertir el cambio neto aplicado
+                    update: { $inc: { stock: -op.netChange } }
+                }
+            }));
+            try {
+                const revertResult = await Products.bulkWrite(revertBulkOps);
+                errorDetails.reversionStatus = `Reversión de ajuste de stock completada para ${revertResult.modifiedCount} productos.`;
+            } catch (revertError) {
+                errorDetails.reversionStatus = `¡Error Crítico! Falló la reversión del ajuste de stock: ${revertError.message}`;
+                console.error("¡Error Crítico! Falló la reversión del stock en catch de updateOrder:", revertError);
+            }
+        } else if (stockUpdateDetails.status === "Conflicto") {
+            errorDetails.reversionStatus = stockUpdateDetails.reversion || "Reversión manejada en conflicto de stock.";
         }
-        res.status(500).json({
-            message: "Error interno del servidor al actualizar la orden",
-            error: error.message
-        });
+        else {
+            errorDetails.reversionStatus = "No se requirió reversión de stock (fallo antes del ajuste o no hubo ajustes).";
+        }
+
+        // Detectar errores específicos si es posible
+        if (error.name === 'CastError') {
+            errorDetails.message = "ID de orden inválido.";
+            return res.status(400).json(errorDetails);
+        }
+
+        res.status(500).json(errorDetails);
     }
 };
 
 //* Actualizar el estado de una Orden
 const updateStateOrder = async (req, res) => {
-    //* Paso 1 - Tomar Datos del Request
-    const { id } = req.params; // ID de la orden a actualizar
-    const { status } = req.body; // Estado a actualizar
-
-    //* Paso 2 - Validar Datos
-    // Validar si el id es un ObjectId válido
-    if (!mongoose.Types.ObjectId.isValid(id)) {
-        return res.status(404).json({
-            msg: `No existe la proforma con el id ${id}. Ingrese un ID válido para actualizar.`
-        });
-    }
-
-    if (!status) {
-        return res.status(400).json({
-            msg: "El campo 'status' es requerido para actualizar el estado."
-        });
-    }
+    let updateDetails = { // Objeto para detalles de la operación
+        statusChange: false,
+        stockAffected: false, // El cambio de estado por sí solo no afecta el stock aquí
+        message: ""
+    };
 
     try {
-        //Agregar fecha de actualización
-        const fechaActual = new Date();
+        //* Paso 1 - Tomar Datos del Request
+        const { id } = req.params; // ID de la orden a actualizar
+        const { status } = req.body; // Estado a actualizar
+
+        //* Paso 2 - Validar Datos
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            // Usar 400 Bad Request para ID inválido,
+            return res.status(400).json({
+                msg: `ID de orden inválido: ${id}.`
+            });
+        }
+
+        if (!status) {
+            return res.status(400).json({
+                msg: "El campo 'status' es requerido para actualizar el estado."
+            });
+        }
+        // --- Lógica de Actualización ---
+
+        // Buscar la orden para verificar si existe antes de intentar actualizar
+        const orderExists = await Orders.findById(id).select('_id status'); // Solo traer campos necesarios
+        if (!orderExists) {
+            return res.status(404).json({
+                msg: `No se encontró la orden con el id ${id}.`
+            });
+        }
+
+        // Opcional: Añadir lógica para prevenir ciertos cambios de estado si es necesario
+        // Ejemplo: No permitir cambiar de 'Enviado' a 'Pendiente'
+        if (orderExists.status === "Enviado" && status === "Pendiente") 
+            {return res.status(400).json({ msg: "No se puede revertir una orden completada a pendiente." })}
 
         // Actualizar el estado y la fecha de última modificación
         const updatedOrder = await Orders.findByIdAndUpdate(
             id,
-            { status, lastUpdate: new Date(fechaActual.getTime() - fechaActual.getTimezoneOffset() * 60000) },
-            { new: true }
-        );
+            { status, lastUpdate: new Date() }, // Usar new Date() directamente
+            { new: true } // Devuelve el documento actualizado
+        ).lean(); // Obtener objeto plano
 
-        if (!updatedOrder) {
-            return res.status(404).json({
-                msg: `No se encontró la proforma con el id ${id}.`
-            });
-        }
+        updateDetails.statusChange = true;
+        updateDetails.message = `Estado de la orden actualizado a '${status}'.`;
 
-        // Responder con el registro actualizado
+        // Aquí devolvemos la orden actualizada como en el código original.
+        const responseData = {
+            _id: updatedOrder._id,
+            customer: updatedOrder.customer,
+            products: updatedOrder.products,
+            discountApplied: updatedOrder.discountApplied,
+            netTotal: updatedOrder.netTotal,
+            totalWithTax: updatedOrder.totalWithTax,
+            status: updatedOrder.status,
+            comment: updatedOrder.comment,
+            registrationDate: updatedOrder.registrationDate,
+            lastUpdate: updatedOrder.lastUpdate,
+        };
+
+
+        // Responder con el registro actualizado y los detalles de la operación
         return res.status(200).json({
-            msg: "Estado de la proforma actualizado correctamente.",
-            data: updatedOrder,
+            msg: updateDetails.message,
+            updatedOrder: responseData, // Cambiado de 'data' a 'updatedOrder' por consistencia
+            updateInfo: updateDetails // Incluir detalles de la operación
         });
+
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({
-            msg: "Error interno del servidor.",
-            error: error.message
-        });
+        // No hay operaciones de stock que revertir en esta función específica
+        let errorDetails = {
+            message: "Error interno del servidor al actualizar el estado de la orden.",
+            detail: error.message,
+            reversionStatus: "No aplica (solo cambio de estado)" // Indicar que no hubo stock involucrado
+        };
+
+        // Loggear el error internamente
+        console.error("Error en updateStateOrder:", error);
+
+        // Devolver error 500
+        return res.status(500).json(errorDetails);
     }
 };
 
-//Eliminar una orden 
+//* Eliminar una orden
 const deleteOrder = async (req, res) => {
+    let stockRestored = false; // Bandera para saber si el stock se intentó restaurar
+    let stockRestoreDetails = {}; // Para guardar detalles de la restauración de stock
+    let orderDeleted = false; // Bandera para saber si la orden se eliminó
+
     try {
         // Toma de datos desde la solicitud
         const { id } = req.params;
 
+        // Validar ID
+        if (!mongoose.Types.ObjectId.isValid(id)) {
+            return res.status(400).json({ message: "ID de orden inválido." });
+        }
+
         // Verificar si la orden existe
-        const orderToDelete = await Orders.findById(id);
+        const orderToDelete = await Orders.findById(id).lean(); // Usar lean para obtener objeto plano
 
         if (!orderToDelete) {
             return res.status(404).json({ message: "Orden no encontrada" });
@@ -389,12 +543,18 @@ const deleteOrder = async (req, res) => {
         // --- Preparar Restauración de Stock ---
         const bulkStockRestoreOps = [];
         const productIdsToFind = orderToDelete.products.map(p => parseInt(p.productId));
-        const productsInDB = await Products.find({ id: { $in: productIdsToFind } });
-        const productsMap = productsInDB.reduce((map, product) => {
-            map[product.id] = product;
-            return map;
-        }, {});
 
+        // Solo buscar productos si la orden tiene productos
+        let productsMap = {};
+        if (productIdsToFind.length > 0) {
+            const productsInDB = await Products.find({ id: { $in: productIdsToFind } }).lean();
+            productsMap = productsInDB.reduce((map, product) => {
+                map[product.id] = product;
+                return map;
+            }, {});
+        }
+
+        let productsNotFound = []; // Para registrar productos no encontrados
         for (const product of orderToDelete.products) {
             const productId = parseInt(product.productId);
             const productInDB = productsMap[productId];
@@ -408,39 +568,73 @@ const deleteOrder = async (req, res) => {
                     }
                 });
             } else {
-                // Opcional: Registrar si un producto de la orden ya no existe
-                console.warn(`Advertencia: Producto con ID ${productId} de la orden ${id} no encontrado en la colección de productos. No se restaurará su stock.`);
+                // Registrar si un producto de la orden ya no existe
+                productsNotFound.push(productId);
+                // console.warn(`Advertencia: Producto con ID ${productId} de la orden ${id} no encontrado. No se restaurará su stock.`);
             }
         }
+        stockRestoreDetails.productsNotFound = productsNotFound; // Guardar IDs no encontrados
 
         // --- Ejecutar Operaciones ---
 
         // 1. Restaurar el stock (si hay operaciones)
         if (bulkStockRestoreOps.length > 0) {
-            await Products.bulkWrite(bulkStockRestoreOps);
-            console.log(`Stock restaurado para ${bulkStockRestoreOps.length} tipos de productos de la orden ${id}.`);
+            stockRestoreDetails.attempted = bulkStockRestoreOps.length;
+            try {
+                const bulkResult = await Products.bulkWrite(bulkStockRestoreOps);
+                stockRestoreDetails.modified = bulkResult.modifiedCount; // Guardar cuántos se modificaron realmente
+                // No se considera conflicto aquí
+                stockRestoreDetails.status = "Éxito";
+                stockRestoreDetails.message = `Intento de restauración de stock para ${stockRestoreDetails.attempted} tipos de producto completado. Modificados: ${stockRestoreDetails.modified}.`;
+                stockRestored = true; // Marcar que se intentó y (al menos parcialmente) completó
+            } catch (stockError) {
+                // Error durante la restauración de stock
+                stockRestoreDetails.status = "Error";
+                stockRestoreDetails.message = `Error al restaurar stock: ${stockError.message}`;
+                stockRestored = false; // Marcar que falló
+                // Lanzar el error para que lo capture el catch principal y detenga la eliminación de la orden
+                throw new Error(`Fallo al restaurar stock: ${stockError.message}`);
+            }
+        } else {
+            stockRestoreDetails.status = "No requerido";
+            stockRestoreDetails.message = "No se requirió restauración de stock (orden sin productos válidos encontrados).";
+            stockRestored = true; // Considerar como 'éxito' en el sentido de que no había nada que hacer
         }
 
-        // 2. Eliminar la orden de la base de datos
+        // 2. Eliminar la orden de la base de datos (Solo si la restauración de stock fue exitosa o no requerida)
         await Orders.findByIdAndDelete(id);
+        orderDeleted = true; // Marcar que la orden se eliminó
 
         res.status(200).json({
-            msg: "Orden eliminada con éxito y stock reestablecido"
+            msg: "Orden eliminada con éxito y stock reestablecido (si aplica)",
+            deletionInfo: {
+                orderDeleted: true,
+                stockRestoreDetails: stockRestoreDetails
+            }
         });
 
     } catch (error) {
+        // Loggear el error internamente
         console.error('Error en deleteOrder:', error);
-        // Considerar si el error vino de bulkWrite o findByIdAndDelete para dar un mensaje más específico
-        res.status(500).json({
+
+        let errorDetails = {
             message: "Error al eliminar la orden",
-            error: error.message
-        });
+            detail: error.message,
+            orderDeleted: orderDeleted, // Indicar si la orden llegó a eliminarse
+            stockRestoreStatus: stockRestoreDetails.status || "No intentado", // Estado de la restauración
+            stockRestoreMessage: stockRestoreDetails.message || "No aplica"
+        };
+
+        // Si el error fue específicamente por ID inválido (aunque ya validado arriba)
+        if (error.name === 'CastError') {
+            errorDetails.message = "ID de orden inválido.";
+            return res.status(400).json(errorDetails);
+        }
+        res.status(500).json(errorDetails);
     }
 };
 
-
-
-
+//* Ver todas las órdenes (con paginación y detalles relacionados)
 const SeeAllOrders = async (req, res) => {
     try {
         // --- Paginación ---
@@ -545,8 +739,7 @@ const SeeAllOrders = async (req, res) => {
     }
 };
 
-
-
+//* Ver una orden por ID (con detalles relacionados)
 const SeeOrderById = async (req, res) => {
     try {
         const { id } = req.params;
@@ -604,13 +797,10 @@ const SeeOrderById = async (req, res) => {
             status: order.status,
             comment: order.comment,
             seller: sellerDetails, // Asignar directamente (ya es objeto plano o null)
-            // Incluir fechas si son necesarias en la respuesta
             registrationDate: order.registrationDate,
             lastUpdate: order.lastUpdate
         };
 
-        // Eliminar campos que no se quieran explícitamente (si .lean() trajo alguno extra)
-        // delete formattedOrder.__v; // Ejemplo
 
         res.status(200).json(formattedOrder);
 
