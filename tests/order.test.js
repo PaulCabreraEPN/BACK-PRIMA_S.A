@@ -25,7 +25,7 @@ beforeAll(async () => {
             username: process.env.SELLER_USER,
             password: process.env.SELLER_PASSWORD
         })
-    SELLER_TOKEN = response2.body.tokenJWT
+    SELLER_TOKEN = response2.body.data.token
     ADMIN_TOKEN = response.body.data.token
 })
 
@@ -48,7 +48,7 @@ describe('[Orders Registration / Routes]', () => {
             .post('/orders/create')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
-                "customer": "0659790190001",
+                "customer": "0659790190001", 
                 "products": [
                     {
                         "productId": "55055012",
@@ -62,9 +62,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "comment": "Hola q cuenta chaval"
             })
-            
         ORDER_ID = response.body.data._id    
         // Assert
         expect(response.status).toEqual(expected)

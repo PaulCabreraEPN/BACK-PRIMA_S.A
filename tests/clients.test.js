@@ -41,7 +41,7 @@ describe('[Clients Registration / Routes]',() => {
             .send({
                 "Ruc":1790012345001,
                 "telephone": 593987654321,
-                "email": "ventas@solucionesec.com",
+                "email": "ventasso@lucionesec.com",
                 "credit": "Contado",
                 "state": "al día",
                 "Address": "Av. Amazonas y Patria, Quito",
