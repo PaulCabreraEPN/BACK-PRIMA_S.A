@@ -3,13 +3,8 @@ import Products from '../models/products.js';
 
 //* Crear Producto
 const CreateProduct = async (req, res) => {
-    let creationDetails = { // Objeto para detalles de la operación
-        status: "Iniciado",
-        message: "Iniciando creación de producto.",
-        productCreated: false,
-        imageHandled: false, // Indica si se procesó una imagen (subida o intento fallido)
-        imageAction: "Ninguna" // 'Subida', 'Eliminada (Duplicado)', 'Eliminada (Error)'
-    };
+    let imageAction = "Ninguna"; // 'Subida', 'Eliminada (Duplicado)', 'Eliminada (Error)', 'Error al eliminar (Duplicado)', 'Error al eliminar (Error Creación)'
+    let newImageUrl = req.imageUrl || null; // Guardar la URL si se subió una imagen
 
     try {
         //* Tomar los datos del body
@@ -17,47 +12,51 @@ const CreateProduct = async (req, res) => {
 
         // --- Validaciones ---
         if (!id || !product_name || !measure || price == null || stock == null) {
-            creationDetails.status = "Error de Validación";
-            creationDetails.message = "Campos requeridos: id, product_name, measure, price, stock.";
-            return res.status(400).json({ message: creationDetails.message, creationInfo: creationDetails });
+            return res.status(400).json({
+                status: "error",
+                code: "MISSING_FIELD",
+                msg: "Campos requeridos: id, product_name, measure, price, stock."
+            });
         }
         if (isNaN(id) || isNaN(price) || isNaN(stock)) {
-            creationDetails.status = "Error de Validación";
-            creationDetails.message = "Los campos id, price y stock deben ser numéricos.";
-            return res.status(400).json({ message: creationDetails.message, creationInfo: creationDetails });
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: "Los campos id, price y stock deben ser numéricos."
+            });
         }
         if (price < 0 || stock < 0) {
-            creationDetails.status = "Error de Validación";
-            creationDetails.message = "Los campos price y stock no pueden ser negativos.";
-            return res.status(400).json({ message: creationDetails.message, creationInfo: creationDetails });
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: "Los campos price y stock no pueden ser negativos."
+            });
         }
-
 
         //* Validar si el producto ya existe por ID
         const verifyProduct = await Products.findOne({ id: id });
         if (verifyProduct) {
-            creationDetails.status = "Conflicto";
-            creationDetails.message = `El producto con ID ${id} ya existe.`;
-            // Si se subió una imagen pero el producto ya existe, eliminarla de Cloudinary
-            if (req.imageUrl) {
-                creationDetails.imageHandled = true;
+            let info = { duplicateProductId: id };
+            // Si se subió una imagen pero el producto ya existe, intentar eliminarla
+            if (newImageUrl) {
+                imageAction = "Intentando eliminar (Duplicado)";
                 try {
-                    await deleteImage(req.imageUrl);
-                    creationDetails.imageAction = "Eliminada (Duplicado)";
+                    await deleteImage(newImageUrl);
+                    imageAction = "Eliminada (Duplicado)";
+                    info.imageStatus = "Imagen duplicada eliminada de Cloudinary.";
                 } catch (cloudinaryError) {
-                    creationDetails.imageAction = "Error al eliminar (Duplicado)";
-                    //console.error('Error al eliminar la imagen de Cloudinary:', cloudinaryError);
-                    // No detenemos el flujo, pero registramos el fallo en la eliminación
-                    creationDetails.message += " Error al intentar eliminar la imagen subida.";
+                    imageAction = "Error al eliminar (Duplicado)";
+                    info.imageStatus = `Error al eliminar imagen duplicada de Cloudinary: ${cloudinaryError.message}`;
+                    console.error(`Error al eliminar imagen duplicada ${newImageUrl}:`, cloudinaryError);
                 }
             }
-            return res.status(409).json({ // Cambiado a 409 Conflict
-                message: creationDetails.message,
-                creationInfo: creationDetails
+            return res.status(409).json({ // 409 Conflict
+                status: "error",
+                code: "RESOURCE_ALREADY_EXISTS",
+                msg: `El producto con ID ${id} ya existe.`,
+                info: info
             });
         }
-
-        creationDetails.message = "Validaciones completadas. Creando producto...";
 
         //* Crear el producto
         const productData = {
@@ -66,21 +65,17 @@ const CreateProduct = async (req, res) => {
             measure,
             price,
             stock,
-            imgUrl: req.imageUrl || '' // Asignar URL si existe
+            imgUrl: newImageUrl || '' // Asignar URL si existe
         };
 
-        if (req.imageUrl) {
-            creationDetails.imageHandled = true;
-            creationDetails.imageAction = "Subida";
+        if (newImageUrl) {
+            imageAction = "Subida";
         }
 
         const newProduct = new Products(productData);
         const savedProduct = await newProduct.save();
-        creationDetails.productCreated = true;
-        creationDetails.status = "Completado";
-        creationDetails.message = "Producto creado correctamente.";
 
-        // Formatear respuesta (opcional, si quieres excluir _id, __v)
+        // Formatear respuesta
         const responseProduct = {
             id: savedProduct.id,
             product_name: savedProduct.product_name,
@@ -90,46 +85,58 @@ const CreateProduct = async (req, res) => {
             imgUrl: savedProduct.imgUrl
         };
 
-        res.status(201).json({
-            message: creationDetails.message,
-            product: responseProduct,
-            creationInfo: creationDetails // Incluir detalles de la creación
+        return res.status(201).json({ // 201 Created
+            status: "success",
+            code: "PRODUCT_CREATED",
+            msg: "Producto creado correctamente.",
+            data: responseProduct,
+            info: { imageAction: imageAction }
         });
 
     } catch (error) {
-        creationDetails.status = "Error Interno";
-        creationDetails.message = "Error al crear el producto.";
-        creationDetails.detail = error.message;
+        console.error("Error en CreateProduct:", error); // Log interno
+        let errorResponse = {
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al crear el producto. Intente de nuevo más tarde.",
+            info: { detail: error.message, imageAction: imageAction }
+        };
 
         // Si ocurre algún error DESPUÉS de subir una imagen, intentar eliminarla
-        if (req.imageUrl) {
-            creationDetails.imageHandled = true; // Se intentó manejar una imagen
+        if (newImageUrl && imageAction === "Subida") { // Solo si se subió y el error fue después
+            errorResponse.info.imageAction = "Intentando eliminar (Error Creación)";
             try {
-                await deleteImage(req.imageUrl);
-                creationDetails.imageAction = "Eliminada (Error Creación)";
-                //console.log('Imagen eliminada de Cloudinary (error en crear producto)');
+                await deleteImage(newImageUrl);
+                errorResponse.info.imageAction = "Eliminada (Error Creación)";
+                errorResponse.info.imageStatus = "Imagen subida eliminada debido a error en creación.";
             } catch (cloudinaryError) {
-                creationDetails.imageAction = "Error al eliminar (Error Creación)";
-                //console.error('Error al eliminar la imagen de Cloudinary tras error:', cloudinaryError);
-                creationDetails.message += " Error adicional al intentar eliminar la imagen subida.";
+                errorResponse.info.imageAction = "Error al eliminar (Error Creación)";
+                errorResponse.info.imageStatus = `Error crítico: No se pudo eliminar la imagen ${newImageUrl} de Cloudinary tras error: ${cloudinaryError.message}`;
+                console.error(`Error crítico al eliminar imagen ${newImageUrl} tras error en CreateProduct:`, cloudinaryError);
             }
         }
-        console.error("Error en CreateProduct:", error); // Loggear el error completo
-        res.status(500).json({
-            message: creationDetails.message,
-            error: creationDetails.detail,
-            creationInfo: creationDetails // Incluir detalles incluso en error
-        });
+        return res.status(500).json(errorResponse);
     }
 }
 
 //* Obtener todos los productos
 const getAllProducts = async (req, res) => {
     try {
-        const productsBDD = await Products.find().select("-_id")
-        res.status(200).json(productsBDD);
+        // Excluir _id y __v si no se necesitan
+        const productsBDD = await Products.find().select("id product_name measure price stock imgUrl -_id");
+        return res.status(200).json({
+            status: "success",
+            code: "PRODUCTS_FETCHED",
+            msg: "Productos obtenidos correctamente.",
+            data: productsBDD
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener los productos", error: error.message })
+        console.error("Error en getAllProducts:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener los productos. Intente de nuevo más tarde."
+        });
     }
 }
 
@@ -139,269 +146,256 @@ const getProductsById = async (req, res) => {
 
     // Validación del ID
     if (isNaN(id)) {
-        return res.status(400).json({ msg: "El ID debe ser un número válido" })
+        return res.status(400).json({
+            status: "error",
+            code: "INVALID_FORMAT",
+            msg: "El ID del producto debe ser un número válido."
+        });
     }
 
     try {
-        const productsBDD = await Products.findOne({ id: Number(id) }).select("-_id") // Convertir id a número
-        if (!productsBDD) {
-            return res.status(404).json({ msg: "Producto no encontrado" })
+        const productBDD = await Products.findOne({ id: Number(id) }).select("id product_name measure price stock imgUrl -_id"); // Convertir id a número
+        if (!productBDD) {
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `Producto con ID ${id} no encontrado.`
+            });
         }
-        res.status(200).json(productsBDD)
+        return res.status(200).json({
+            status: "success",
+            code: "PRODUCT_FOUND",
+            msg: "Producto encontrado.",
+            data: productBDD
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener el producto", error: error.message })
+        console.error("Error en getProductsById:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener el producto. Intente de nuevo más tarde."
+        });
     }
 }
 
 //* Actualizar producto
 const updatedProduct = async (req, res) => {
-    let updateDetails = { // Objeto para detalles de la operación
-        status: "Iniciado",
-        message: "Iniciando actualización de producto.",
-        productFound: false,
-        fieldsUpdated: [], // Campos que se intentaron actualizar
-        imageAction: "Ninguna", // 'Reemplazada', 'Añadida', 'Eliminada (Error)', 'Error al eliminar anterior'
-        oldImageDeleted: false,
-        newImageUploaded: false, // Indica si se proporcionó una nueva imagen en la solicitud
-        newImageDeletedOnError: false
-    };
-    let oldImageUrl = null; // Para guardar la URL de la imagen anterior
+    let imageAction = "Ninguna"; // 'Reemplazada', 'Añadida', 'Eliminada (Error)', 'Error al eliminar anterior', 'Eliminada (Producto No Encontrado)', 'Error al eliminar (Producto No Encontrado)'
+    let oldImageUrl = null;
     let newImageUrl = req.imageUrl || null; // Guardar la nueva URL si existe
-
-    try {
-        const { id } = req.params;
-
-        // Validación del ID (aunque ya se hace en getProductsById, es bueno tenerla aquí también)
-        if (isNaN(id)) {
-            updateDetails.status = "Error de Validación";
-            updateDetails.message = "El ID debe ser un número válido.";
-            return res.status(400).json({ message: updateDetails.message, updateInfo: updateDetails });
-        }
-
-        const productExists = await Products.findOne({ id: id });
-        if (!productExists) {
-            updateDetails.status = "No Encontrado";
-            updateDetails.message = "Producto no encontrado.";
-            // Si se subió una imagen para un producto que no existe, eliminarla
-            if (newImageUrl) {
-                updateDetails.newImageUploaded = true;
-                try {
-                    await deleteImage(newImageUrl);
-                    updateDetails.imageAction = "Eliminada (Producto No Encontrado)";
-                    updateDetails.newImageDeletedOnError = true; // Se eliminó por error
-                } catch (cloudinaryError) {
-                    updateDetails.imageAction = "Error al eliminar (Producto No Encontrado)";
-                    //console.error('Error al eliminar imagen subida para producto no encontrado:', cloudinaryError);
-                    updateDetails.message += " Error adicional al intentar eliminar la imagen subida.";
-                }
-            }
-            return res.status(404).json({ message: updateDetails.message, updateInfo: updateDetails });
-        }
-        updateDetails.productFound = true;
-        oldImageUrl = productExists.imgUrl; // Guardar URL anterior
-
-        // Campos que se pueden actualizar
-        const { product_name, measure, price, stock } = req.body;
-        const updateData = {};
-        updateDetails.fieldsUpdated = []; // Reiniciar por si acaso
-
-        // Validaciones de datos de entrada (opcional pero recomendado)
-        if (price !== undefined && (isNaN(price) || price < 0)) {
-            updateDetails.status = "Error de Validación";
-            updateDetails.message = "El campo price debe ser un número no negativo.";
-            // Considerar eliminar newImageUrl si falla la validación aquí también
-            return res.status(400).json({ message: updateDetails.message, updateInfo: updateDetails });
-        }
-        if (stock !== undefined && (isNaN(stock) || stock < 0)) {
-            updateDetails.status = "Error de Validación";
-            updateDetails.message = "El campo stock debe ser un número no negativo.";
-            // Considerar eliminar newImageUrl si falla la validación aquí también
-            return res.status(400).json({ message: updateDetails.message, updateInfo: updateDetails });
-        }
-
-
-        if (product_name !== undefined) { updateData.product_name = product_name; updateDetails.fieldsUpdated.push('product_name'); }
-        if (measure !== undefined) { updateData.measure = measure; updateDetails.fieldsUpdated.push('measure'); }
-        if (price !== undefined) { updateData.price = price; updateDetails.fieldsUpdated.push('price'); }
-        if (stock !== undefined) { updateData.stock = stock; updateDetails.fieldsUpdated.push('stock'); }
-
-        updateDetails.message = "Datos validados. Procesando imagen si existe...";
-
-        // Si hay una nueva imagen
-        if (newImageUrl) {
-            updateDetails.newImageUploaded = true;
-            updateDetails.imageAction = "Añadida"; // Acción inicial
-            // Si el producto ya tenía una imagen diferente, eliminarla de Cloudinary
-            if (oldImageUrl && oldImageUrl !== '' && oldImageUrl !== newImageUrl) {
-                try {
-                    await deleteImage(oldImageUrl);
-                    updateDetails.oldImageDeleted = true;
-                    updateDetails.imageAction = "Reemplazada"; // Se reemplazó la anterior
-                } catch (cloudinaryError) {
-                    updateDetails.imageAction = "Error al eliminar anterior";
-                    //console.error('Error al eliminar la imagen anterior:', cloudinaryError);
-                    // Continuar de todos modos, pero registrar el fallo
-                    updateDetails.message += " No se pudo eliminar la imagen anterior.";
-                }
-            }
-            updateData.imgUrl = newImageUrl;
-            updateDetails.fieldsUpdated.push('imgUrl');
-        }
-
-        // Verificar si hay datos para actualizar
-        if (Object.keys(updateData).length === 0) {
-            updateDetails.status = "Sin Cambios";
-            updateDetails.message = "No se proporcionaron datos para actualizar.";
-            // Si se subió una imagen pero no había otros datos, ¿debería guardarse?
-            // Por ahora, asumimos que si solo se sube imagen, se actualiza.
-            // Si no se subió imagen y no hay datos, retornar.
-            if (!newImageUrl) {
-                return res.status(200).json({ // 200 OK, pero sin cambios
-                    message: updateDetails.message,
-                    updateInfo: updateDetails
-                });
-            }
-        }
-
-
-        updateDetails.message = `Actualizando campos: ${updateDetails.fieldsUpdated.join(', ')}...`;
-
-        // Ejecutar la actualización
-        const updatedProductDoc = await Products.findOneAndUpdate({ id: id }, updateData, { new: true }).lean(); // Usar lean
-
-        updateDetails.status = "Completado";
-        updateDetails.message = "Producto actualizado correctamente.";
-
-        // Formatear respuesta
-        const responseProduct = {
-            id: updatedProductDoc.id,
-            product_name: updatedProductDoc.product_name,
-            measure: updatedProductDoc.measure,
-            price: updatedProductDoc.price,
-            stock: updatedProductDoc.stock,
-            imgUrl: updatedProductDoc.imgUrl
-        };
-
-        res.status(200).json({
-            message: updateDetails.message,
-            updatedProduct: responseProduct,
-            updateInfo: updateDetails // Incluir detalles de la actualización
-        });
-
-    } catch (error) {
-        updateDetails.status = "Error Interno";
-        updateDetails.message = "Error al actualizar el producto.";
-        updateDetails.detail = error.message;
-
-        // Si ocurrió algún error DESPUÉS de subir una nueva imagen, intentar eliminarla
-        if (newImageUrl) {
-            updateDetails.newImageUploaded = true; // Se intentó manejar una nueva imagen
-            try {
-                await deleteImage(newImageUrl);
-                updateDetails.imageAction = "Eliminada (Error Actualización)";
-                updateDetails.newImageDeletedOnError = true;
-            } catch (cloudinaryError) {
-                updateDetails.imageAction = "Error al eliminar (Error Actualización)";
-                //console.error('Error al eliminar la imagen nueva de Cloudinary tras error:', cloudinaryError);
-                updateDetails.message += " Error adicional al intentar eliminar la imagen nueva subida.";
-            }
-        }
-        console.error("Error en updatedProduct:", error); // Loggear el error completo
-        res.status(500).json({
-            message: updateDetails.message,
-            error: updateDetails.detail,
-            updateInfo: updateDetails // Incluir detalles incluso en error
-        });
-    }
-}
-
-//* Eliminar producto
-const deleteProduct = async (req, res) => {
-    let deletionDetails = { // Objeto para detalles de la operación
-        status: "Iniciado",
-        message: "Iniciando eliminación de producto.",
-        productFound: false,
-        productDeleted: false,
-        imageAction: "Ninguna", // 'Eliminada', 'No Requerida', 'Error al eliminar'
-        imageDeleted: false
-    };
-    let imageUrlToDelete = null; // Para guardar la URL de la imagen a eliminar
+    let updateInfo = {}; // Para detalles adicionales
 
     try {
         const { id } = req.params;
 
         // Validación del ID
         if (isNaN(id)) {
-            deletionDetails.status = "Error de Validación";
-            deletionDetails.message = "El ID debe ser un número válido.";
-            return res.status(400).json({ message: deletionDetails.message, deletionInfo: deletionDetails });
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: "El ID del producto debe ser un número válido."
+            });
         }
 
         const productExists = await Products.findOne({ id: id });
         if (!productExists) {
-            deletionDetails.status = "No Encontrado";
-            deletionDetails.message = "Producto no encontrado.";
-            return res.status(404).json({ message: deletionDetails.message, deletionInfo: deletionDetails });
-        }
-        deletionDetails.productFound = true;
-        imageUrlToDelete = productExists.imgUrl; // Guardar URL si existe
-
-        deletionDetails.message = "Producto encontrado. Procesando eliminación de imagen si existe...";
-
-        // Si el producto tiene una imagen, intentar eliminarla de Cloudinary
-        if (imageUrlToDelete && imageUrlToDelete !== '') {
-            deletionDetails.imageAction = "Intentando eliminar";
-            try {
-                await deleteImage(imageUrlToDelete);
-                deletionDetails.imageAction = "Eliminada";
-                deletionDetails.imageDeleted = true;
-                //console.log('Imagen eliminada de Cloudinary');
-            } catch (cloudinaryError) {
-                deletionDetails.imageAction = "Error al eliminar";
-                //console.error('Error al eliminar la imagen de Cloudinary:', cloudinaryError);
-                // Continuamos con la eliminación del producto aunque falle la eliminación de la imagen
-                deletionDetails.message += " No se pudo eliminar la imagen asociada de Cloudinary.";
+            updateInfo.productStatus = "No encontrado";
+            // Si se subió una imagen para un producto que no existe, eliminarla
+            if (newImageUrl) {
+                imageAction = "Intentando eliminar (Producto No Encontrado)";
+                try {
+                    await deleteImage(newImageUrl);
+                    imageAction = "Eliminada (Producto No Encontrado)";
+                    updateInfo.imageStatus = "Imagen subida eliminada porque el producto no existe.";
+                } catch (cloudinaryError) {
+                    imageAction = "Error al eliminar (Producto No Encontrado)";
+                    updateInfo.imageStatus = `Error al eliminar imagen ${newImageUrl} subida para producto no encontrado: ${cloudinaryError.message}`;
+                    console.error(`Error al eliminar imagen ${newImageUrl} para producto no encontrado ${id}:`, cloudinaryError);
+                }
             }
-        } else {
-            deletionDetails.imageAction = "No Requerida";
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `Producto con ID ${id} no encontrado.`,
+                info: updateInfo
+            });
+        }
+        oldImageUrl = productExists.imgUrl; // Guardar URL anterior
+
+        // Campos que se pueden actualizar y validaciones
+        const { product_name, measure, price, stock } = req.body;
+        const updateData = {};
+        const fieldsUpdated = [];
+
+        if (price !== undefined) {
+            if (isNaN(price) || price < 0) {
+                return res.status(400).json({ status: "error", code: "INVALID_FORMAT", msg: "El campo price debe ser un número no negativo." });
+            }
+            updateData.price = price;
+            fieldsUpdated.push('price');
+        }
+        if (stock !== undefined) {
+            if (isNaN(stock) || stock < 0) {
+                return res.status(400).json({ status: "error", code: "INVALID_FORMAT", msg: "El campo stock debe ser un número no negativo." });
+            }
+            updateData.stock = stock;
+            fieldsUpdated.push('stock');
+        }
+        if (product_name !== undefined) { updateData.product_name = product_name; fieldsUpdated.push('product_name'); }
+        if (measure !== undefined) { updateData.measure = measure; fieldsUpdated.push('measure'); }
+
+        // Procesar imagen si existe
+        if (newImageUrl) {
+            imageAction = "Añadida";
+            // Si había una imagen anterior diferente, eliminarla
+            if (oldImageUrl && oldImageUrl !== '' && oldImageUrl !== newImageUrl) {
+                imageAction = "Intentando reemplazar";
+                try {
+                    await deleteImage(oldImageUrl);
+                    imageAction = "Reemplazada";
+                    updateInfo.oldImageStatus = "Imagen anterior eliminada.";
+                } catch (cloudinaryError) {
+                    imageAction = "Error al eliminar anterior";
+                    updateInfo.oldImageStatus = `No se pudo eliminar la imagen anterior ${oldImageUrl}: ${cloudinaryError.message}`;
+                    console.error(`Error al eliminar imagen anterior ${oldImageUrl} para producto ${id}:`, cloudinaryError);
+                    // Continuar de todos modos
+                }
+            }
+            updateData.imgUrl = newImageUrl;
+            fieldsUpdated.push('imgUrl');
         }
 
-        deletionDetails.message = "Eliminando producto de la base de datos...";
-
-        // Eliminar el producto de la base de datos
-        await Products.findOneAndDelete({ id: id });
-        deletionDetails.productDeleted = true;
-        deletionDetails.status = "Completado";
-        deletionDetails.message = "Producto eliminado correctamente.";
-
-        // Si la imagen no se pudo eliminar, el mensaje final lo refleja
-        if (deletionDetails.imageAction === "Error al eliminar") {
-            deletionDetails.message = "Producto eliminado de la base de datos, pero ocurrió un error al eliminar la imagen asociada de Cloudinary.";
+        // Verificar si hay datos para actualizar
+        if (Object.keys(updateData).length === 0) {
+            return res.status(200).json({ // 200 OK, pero sin cambios efectivos
+                status: "success", // O 'warning' si se prefiere indicar que no hubo cambios
+                code: "NO_CHANGES_DETECTED",
+                msg: "No se proporcionaron datos nuevos para actualizar.",
+                info: { imageAction: imageAction, fieldsAttempted: fieldsUpdated }
+            });
         }
 
+        // Ejecutar la actualización
+        const updatedProductDoc = await Products.findOneAndUpdate({ id: id }, updateData, { new: true }).select("id product_name measure price stock imgUrl -_id").lean();
 
-        res.status(200).json({
-            message: deletionDetails.message,
-            deletionInfo: deletionDetails // Incluir detalles de la eliminación
+        updateInfo.fieldsUpdated = fieldsUpdated;
+        updateInfo.imageAction = imageAction;
+
+        return res.status(200).json({
+            status: "success",
+            code: "PRODUCT_UPDATED",
+            msg: "Producto actualizado correctamente.",
+            data: updatedProductDoc,
+            info: updateInfo
         });
 
     } catch (error) {
-        deletionDetails.status = "Error Interno";
-        deletionDetails.message = "Error al eliminar el producto.";
-        deletionDetails.detail = error.message;
+        console.error("Error en updatedProduct:", error); // Log interno
+        let errorResponse = {
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al actualizar el producto. Intente de nuevo más tarde.",
+            info: { detail: error.message, imageAction: imageAction }
+        };
 
-        // Loggear el error completo
-        //console.error("Error en deleteProduct:", error);
-
-        res.status(500).json({
-            message: deletionDetails.message,
-            error: deletionDetails.detail,
-            deletionInfo: deletionDetails // Incluir detalles incluso en error
-        });
+        // Si ocurrió algún error DESPUÉS de subir una nueva imagen, intentar eliminarla
+        if (newImageUrl && (imageAction === "Añadida" || imageAction === "Reemplazada" || imageAction === "Intentando reemplazar")) {
+            errorResponse.info.imageAction = "Intentando eliminar (Error Actualización)";
+            try {
+                await deleteImage(newImageUrl);
+                errorResponse.info.imageAction = "Eliminada (Error Actualización)";
+                errorResponse.info.imageStatus = "Imagen nueva eliminada debido a error en actualización.";
+            } catch (cloudinaryError) {
+                errorResponse.info.imageAction = "Error al eliminar (Error Actualización)";
+                errorResponse.info.imageStatus = `Error crítico: No se pudo eliminar la imagen nueva ${newImageUrl} de Cloudinary tras error: ${cloudinaryError.message}`;
+                console.error(`Error crítico al eliminar imagen ${newImageUrl} tras error en updatedProduct:`, cloudinaryError);
+            }
+        }
+        return res.status(500).json(errorResponse);
     }
 }
 
+//* Eliminar producto
+const deleteProduct = async (req, res) => {
+    let imageAction = "Ninguna"; // 'Eliminada', 'No Requerida', 'Error al eliminar'
+    let imageUrlToDelete = null;
+    let deletionInfo = {};
 
+    try {
+        const { id } = req.params;
+
+        // Validación del ID
+        if (isNaN(id)) {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: "El ID del producto debe ser un número válido."
+            });
+        }
+
+        const productExists = await Products.findOne({ id: id });
+        if (!productExists) {
+            return res.status(404).json({
+                status: "error",
+                code: "NOT_FOUND",
+                msg: `Producto con ID ${id} no encontrado.`
+            });
+        }
+        imageUrlToDelete = productExists.imgUrl; // Guardar URL si existe
+
+        // Intentar eliminar la imagen de Cloudinary si existe
+        if (imageUrlToDelete && imageUrlToDelete !== '') {
+            imageAction = "Intentando eliminar";
+            try {
+                await deleteImage(imageUrlToDelete);
+                imageAction = "Eliminada";
+                deletionInfo.imageStatus = "Imagen asociada eliminada de Cloudinary.";
+            } catch (cloudinaryError) {
+                imageAction = "Error al eliminar";
+                deletionInfo.imageStatus = `Error al eliminar imagen ${imageUrlToDelete} de Cloudinary: ${cloudinaryError.message}`;
+                console.error(`Error al eliminar imagen ${imageUrlToDelete} para producto ${id}:`, cloudinaryError);
+                // Continuamos con la eliminación del producto aunque falle la eliminación de la imagen
+            }
+        } else {
+            imageAction = "No Requerida";
+            deletionInfo.imageStatus = "No había imagen asociada para eliminar.";
+        }
+
+        // Eliminar el producto de la base de datos
+        await Products.findOneAndDelete({ id: id });
+
+        deletionInfo.imageAction = imageAction;
+
+        // Determinar el estado final y mensaje
+        let finalStatus = "success";
+        let finalCode = "PRODUCT_DELETED";
+        let finalMsg = "Producto eliminado correctamente.";
+        let finalStatusCode = 200;
+
+        if (imageAction === "Error al eliminar") {
+            finalStatus = "warning"; // La operación principal (borrado DB) fue exitosa, pero la secundaria (borrado imagen) falló
+            finalCode = "PRODUCT_DELETED_WITH_IMAGE_ERROR";
+            finalMsg = "Producto eliminado de la base de datos, pero ocurrió un error al eliminar la imagen asociada de Cloudinary.";
+            // Mantenemos 200 OK porque el recurso principal fue eliminado
+        }
+
+        return res.status(finalStatusCode).json({
+            status: finalStatus,
+            code: finalCode,
+            msg: finalMsg,
+            info: deletionInfo
+        });
+
+    } catch (error) {
+        console.error("Error en deleteProduct:", error); // Log interno
+        return res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al eliminar el producto. Intente de nuevo más tarde.",
+            info: { detail: error.message, imageAction: imageAction }
+        });
+    }
+}
 
 export {
     CreateProduct,
