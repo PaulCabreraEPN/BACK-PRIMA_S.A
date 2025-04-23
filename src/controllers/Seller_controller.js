@@ -118,10 +118,9 @@ const passwordRecovery = async (req,res)=>{
         //* Paso 3 - Interactuar con BDD
         const token = await SellerBDD.createToken()
         SellerBDD.token = token
-        SellerBDD.confirmEmail = false
         await sendMailToVerifyEmail(email,token)
         await SellerBDD.save()
-        res.status(200).json({msg:"Se ha enviado un correo para recuperar la contraseña"})
+        res.status(200).json({msg:`Se ha enviado un correo a ${email} para recuperar la contraseña`})
     } catch (error) {
         res.status(500).json({msg: "Error al recuperar la contraseña",error: error.message})
     }
