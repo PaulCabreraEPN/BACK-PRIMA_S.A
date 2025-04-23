@@ -59,7 +59,6 @@ const registerSeller = async (req, res) => {
     // Enviar respuesta con el token
     res.status(201).json({msg: "Vendedor registrado exitosamente",notification:`Se ha enviado un correo a ${email} para confirmar el registro y se ha generado un usuario y una contraseña temporal`})
     } catch (error) {
-        console.log(error);
         res.status(500).json({msg: "Error al registrar el vendedor",error: error.message})
     }
 }
@@ -81,7 +80,6 @@ const confirmEmail = async (req,res)=>{
     await SellerBDD.save()
     res.status(200).json({msg:"Token confirmado, ya puedes iniciar sesión"})
     } catch (error) {
-        console.log(error);
         res.status(500).json({msg: "Error al confirmar el registro",error: error.message})
     }
 }
@@ -218,8 +216,7 @@ const searchSellerById = async (req, res) => {
 
         return res.status(200).json({ msg: idSeller });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ msg: "Error al buscar el vendedor" });
+        return res.status(500).json({ msg: "Error al buscar el vendedor",error: error.message });
     }
 }
 
@@ -253,14 +250,11 @@ const searchSellerByNumberId = async (req, res) =>{
         return res.status(200).json({ msg: idSeller });
 
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ msg: "Error al buscar el vendedor" });
+        return res.status(500).json({ msg: "Error al buscar el vendedor",error: error.message });
     }
-   
 }
 
-// Actualizar vendedor - patch 
-
+//* Actualizar vendedor  
 const updateSellerController = async (req, res) => {
     //* Paso 1 - Tomar Datos del Request
     const { id } = req.params; // ID del vendedor a actualizar
@@ -310,7 +304,6 @@ const updateSellerController = async (req, res) => {
 };
 
 
-//Eliminar 
 //* Eliminar un vendedor por ID - delete
 const DeleteSellerController = async (req, res) => {
     //* Paso 1 - Tomar Datos del Request
@@ -334,8 +327,6 @@ const DeleteSellerController = async (req, res) => {
             msg: "Vendedor eliminado correctamente",
         });
     } catch (error) {
-        // Manejo de errores
-        console.error(error);
         return res.status(500).json({ msg: "Error interno del servidor", error: error.message });
     }
 };
