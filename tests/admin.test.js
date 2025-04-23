@@ -255,7 +255,7 @@ describe('[Seller Search / Routes]',() => {
         const response = await request
             .get('/sellers-numberid/1713175873')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
-        SellerID = response.body.msg._id
+            SellerID = response.body.data._id
         // Assert
         expect(response.status).toEqual(expected)
     })
@@ -338,7 +338,7 @@ describe('[Seller Update / Routes]',() => {
         const expected = 200
         // Act
         const response = await request
-            .patch('/updateSeller/67c72d19c13895987c94c478')
+            .patch(`/updateSeller/${SellerID}`)
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send({
                 "names": "Diaz Ariel"
