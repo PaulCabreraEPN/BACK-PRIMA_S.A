@@ -1,21 +1,14 @@
 import pkg from 'express-validator';
 const { body, param, query, validationResult, check } = pkg;
-import { validateEcuadorianID } from './seller_validator.js';
-
-// Validar RUC ecuatoriano
-const validateEcuadorianRUC = (ruc) => {
-    if (!/^\d{13}$/.test(ruc)) return false;
-    return ruc.endsWith('001') && validateEcuadorianID(ruc.substring(0, 10));
-};
+import validator from 'ecuador-validator'
 
 // Validaciones para la creación de pedido
 const validateCreateOrder = [
     body('customer')
         .notEmpty().withMessage('El cliente es requerido')
         .custom((value) => {
-            const id = value.toString();
-            if (!validateEcuadorianRUC(id)) {
-                throw new Error('Cédula ecuatoriana inválida');
+            if (!validator.ruc(value)) {
+                throw new Error('Ruc inválido');
             }
             return true;
         }),
@@ -52,7 +45,7 @@ const validateCreateOrder = [
     body('comment')
         .optional()
         .isString().withMessage('Comentario debe ser texto')
-        .isLength({ max: 500 }).withMessage('Comentario demasiado largo')
+        .isLength({ min:10,max: 500 }).withMessage('El comentario debe tener entre 10 y 500 caracteres'),
 ];
 
 // Validaciones para la actualización de pedido
@@ -94,7 +87,7 @@ const validateUpdateOrderStatus = [
     body('status')
         .notEmpty().withMessage('El estado es requerido')
         .isIn(['Pendiente', 'En proceso', 'Enviado', 'Cancelado'])
-        .withMessage('Estado inválido')
+        .withMessage('Estado inválido- Estados válidos: Pendiente, En proceso, Enviado, Cancelado'),
 ];
 
 // Validaciones para obtener pedido por ID
