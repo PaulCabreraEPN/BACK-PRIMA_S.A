@@ -45,9 +45,9 @@ describe('[Products Registration / Routes]',() => {
         // Assert
         expect(response.status).toEqual(expected)
     })
-    it('Should return 400 on creating a product with an existing ID',async () => {
+    it('Should return 409 on creating a product with an existing ID',async () => {
         // Arrange
-        const expected = 400
+        const expected = 409
         // Act
         const response = await request
             .post('/products/register')

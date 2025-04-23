@@ -65,7 +65,6 @@ describe('[Orders Registration / Routes]', () => {
                 "comment": "Hola q cuenta chaval"
             })
         ORDER_ID = response.body.savedOrder._id
-        console.log(ORDER_ID);
         // Assert
         expect(response.status).toEqual(expected)
     })
@@ -188,8 +187,6 @@ describe('[Orders Registration / Routes]', () => {
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
             })
-
-        console.log(response.body);
         // Assert
         expect(response.status).toEqual(expected)
     })

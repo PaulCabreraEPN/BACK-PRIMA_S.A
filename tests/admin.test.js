@@ -160,10 +160,10 @@ describe('[Seller Registration / Routes]', () => {
             .send({
                 "names": "Carlos Alberto",
                 "lastNames": "González Suarez",
-                "numberID": 1713175873,
+                "cedula": 1713175873,
                 "email": "xiditi6286@insfou.com",
                 "SalesCity": "Barcelona",
-                "PhoneNumber": 593987654321,
+                "PhoneNumber": "0987654321",
                 "role": "Seller",
                 "status": false
             })
@@ -301,9 +301,8 @@ describe('[Seller Search / Routes]',() => {
         
         // Act
         const response = await request
-            .get('/sellers/67c72d19c13895987c94c478')
+            .get('/sellers/6808382f9ab87e70de1573b6')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
-        
         // Assert
         expect(response.status).toEqual(expected)
     })
