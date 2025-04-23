@@ -15,7 +15,7 @@ const createOrder = async (req, res) => {
 
         // --- Validaciones Iniciales ---
         if (!customer || !inputProducts || !Array.isArray(inputProducts) || inputProducts.length === 0 || discountApplied == null || netTotal == null || totalWithTax == null) {
-            return res.status(400).json({ message: "Cliente, lista de productos (no vacía), descuento aplicado, total neto y total con impuesto son requeridos." });
+            return res.status(400).json({ message: "Lista de productos (no vacía), descuento aplicado, total neto y total con impuesto son requeridos." });
         }
 
         if (discountApplied < 0 || netTotal < 0 || totalWithTax < 0) {
@@ -550,12 +550,6 @@ const SeeAllOrders = async (req, res) => {
 const SeeOrderById = async (req, res) => {
     try {
         const { id } = req.params;
-
-        if (!mongoose.Types.ObjectId.isValid(id)) {
-            return res.status(404).json({
-                msg: `No existe la orden con el id ${id}. Ingrese un ID válido.`
-            });
-        }
 
         // 1. Buscar la orden principal y obtenerla como objeto plano
         const order = await Orders.findById(id).lean(); // Usar lean() para obtener objeto plano
