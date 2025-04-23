@@ -26,7 +26,7 @@ beforeAll(async () => {
             password: process.env.SELLER_PASSWORD
         })
     SELLER_TOKEN = response2.body.tokenJWT
-    ADMIN_TOKEN = response.body.tokenJWT
+    ADMIN_TOKEN = response.body.data.token
 })
 
 afterAll(async () => {
@@ -48,7 +48,7 @@ describe('[Orders Registration / Routes]', () => {
             .post('/orders/create')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
-                "customer": 1767890123001,
+                "customer": "0659790190001",
                 "products": [
                     {
                         "productId": "55055012",
@@ -64,7 +64,8 @@ describe('[Orders Registration / Routes]', () => {
                 "totalWithTax": 10.67,
                 "comment": "Hola q cuenta chaval"
             })
-        ORDER_ID = response.body.savedOrder._id
+            
+        ORDER_ID = response.body.data._id    
         // Assert
         expect(response.status).toEqual(expected)
     })
@@ -520,7 +521,7 @@ describe('[Orders Delete / Routes]', () => {
         const response = await request
             .delete(`/orders/delete/${ORDER_ID}`)
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
-        // Assert
+        // Assert  
         expect(response.status).toEqual(expected)
     })
     it('Should return 404 on deleting an order with invalid id', async () => {
