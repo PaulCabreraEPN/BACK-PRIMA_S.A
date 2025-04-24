@@ -8,8 +8,6 @@ import clientsRoutes from './routers/clients_routes.js'
 import orderRoutes from './routers/order_routes.js'
 import staticsRoutes from './routers/statics_routes.js'
 import authRoutes from './routers/auth_routes.js'
-import swaggerUI from 'swagger-ui-express'
-import specs from '../swagger/swagger.js';
 import { errorHandler } from './middlewares/errorhandler.js';
 
 // Inicializaciones
@@ -29,7 +27,7 @@ app.use(express.json());
 
 // Rutas 
 app.get('/',(req,res)=>{
-    res.send("Server on 👨‍💻✅");
+    res.json({msg:"Server on 👨‍💻✅"});
 });
 
 app.use('/api/',adminRoutes)
@@ -38,7 +36,7 @@ app.use('/api/',clientsRoutes)
 app.use('/api/',orderRoutes)
 app.use('/api/',staticsRoutes)
 app.use('/api/',authRoutes)
-app.use('/api-docs',swaggerUI.serve,swaggerUI.setup(specs))
+
 
 
 //Rutas no encontradas
