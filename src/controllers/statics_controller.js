@@ -11,14 +11,25 @@ const getAllCount = async (req, res) => {
         const sellersCount = await sellers.countDocuments({ status: true });
         const clientsCount = await clients.countDocuments();
 
-        res.status(200).json({ products: productsCount,
-            orders: ordersCount,
-            sellers: sellersCount,
-            clients: clientsCount
+        res.status(200).json({
+            status: "success",
+            code: "COUNTS_RETRIEVED", // Código específico para conteos
+            msg: "Conteo de entidades obtenido exitosamente.",
+            data: {
+                products: productsCount,
+                orders: ordersCount,
+                sellers: sellersCount,
+                clients: clientsCount
+            }
         });
 
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener el conteo de productos", error: error.message });
+        console.error("Error en getAllCount:", error); // Log interno
+        res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener el conteo. Intente de nuevo más tarde."
+        });
     }
 };
 
@@ -65,14 +76,21 @@ const GetTopSellers = async (req, res) => {
 
         // Responder con los dos arreglos: nombres y ventas
         res.status(200).json({
-            sellerNames,
-            salesCounts
+            status: "success",
+            code: "TOP_SELLERS_FOUND", // Código específico para top vendedores
+            msg: "Top 5 de vendedores obtenido exitosamente.",
+            data: {
+                sellerNames,
+                salesCounts
+            }
         });
 
     } catch (error) {
+        console.error("Error en GetTopSellers:", error); // Log interno
         res.status(500).json({
-            message: "Error al obtener el top de vendedores",
-            error: error.message
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener el top de vendedores. Intente de nuevo más tarde."
         });
     }
 };
@@ -89,7 +107,7 @@ const GetSalesBySeller = async (req, res) => {
                 }
             },
             {
-                $sort: { totalSales: 1 } // Ordenar por total de ventas en orden descendente
+                $sort: { totalSales: 1 } // Ordenar por total de ventas en orden ascendente
             }
         ]);
 
@@ -110,12 +128,22 @@ const GetSalesBySeller = async (req, res) => {
         const totalSales = salesBySeller.map(order => order.totalSales);
 
         // Responder con los dos arreglos: nombres y totalSales
-        res.status(200).json({ names, totalSales });
+        res.status(200).json({
+            status: "success",
+            code: "SALES_BY_SELLER_RETRIEVED", // Código específico para ventas por vendedor
+            msg: "Ventas totales por vendedor obtenidas exitosamente.",
+            data: {
+                names,
+                totalSales
+            }
+         });
 
     } catch (error) {
+        console.error("Error en GetSalesBySeller:", error); // Log interno
         res.status(500).json({
-            message: "Error al obtener las ventas por vendedor",
-            error: error.message
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener las ventas por vendedor. Intente de nuevo más tarde."
         });
     }
 };
@@ -158,9 +186,22 @@ const getWeeklySales = async (req, res) => {
             }
         });
 
-        res.status(200).json({ weekDays, salesByDay });
+        res.status(200).json({
+            status: "success",
+            code: "WEEKLY_SALES_RETRIEVED", // Código específico para ventas semanales
+            msg: "Ventas semanales obtenidas exitosamente.",
+            data: {
+                weekDays,
+                salesByDay
+            }
+        });
     } catch (error) {
-        res.status(500).json({ message: "Error al obtener las ventas semanales", error: error.message });
+        console.error("Error en getWeeklySales:", error); // Log interno
+        res.status(500).json({
+            status: "error",
+            code: "SERVER_ERROR",
+            msg: "Ha ocurrido un error inesperado al obtener las ventas semanales. Intente de nuevo más tarde."
+         });
     }
 };
 
