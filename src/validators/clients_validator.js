@@ -19,7 +19,7 @@ export const validateCreateClient = [
     body('telephone')
         .notEmpty().withMessage('El teléfono es obligatorio')
         .custom((value) => {
-            if (!validator.cellphone(value,'code')) {
+            if (!validator.cellphone(value)) {
                 throw new Error('El teléfono no es válido');
             }
             return true;
@@ -67,7 +67,7 @@ export const validateUpdateClient = [
     body('telephone')
         .optional()
         .custom((value) => {
-            if (!validator.cellphone(value,'code')) {
+            if (!validator.cellphone(value)) {
                 throw new Error('El teléfono no es válido');
             }
             return true;
