@@ -39,8 +39,8 @@ describe('[Clients Registration / Routes]',() => {
             .post('/clients/register')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send({
-                "Ruc":1790012345001,
-                "telephone": 593987654321,
+                "Ruc":"1790012345001",
+                "telephone": "0987654321",
                 "email": "ventasso@lucionesec.com",
                 "credit": "Contado",
                 "state": "al día",
