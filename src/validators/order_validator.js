@@ -34,10 +34,24 @@ const validateCreateOrder = [
         .isFloat({ min: 0, max: 100 }).withMessage('Descuento debe ser un número entre 0 y 100'),
 
     body('netTotal')
-        .isFloat({ min: 0 }).withMessage('Total neto debe ser un número positivo'),
+        .isFloat({ min: 0 }).withMessage('Total neto debe ser un número positivo')
+        .custom((value) => {
+            const regex = /^\d+(\.\d{1,2})?$/;
+            if (!regex.test(value.toString())) {
+                throw new Error('Total neto no puede tener más de dos decimales');
+            }
+            return true;
+        }),
 
     body('totalWithTax')
         .isFloat({ min: 0 }).withMessage('Total con impuestos debe ser un número positivo')
+        .custom((value) => {
+            const regex = /^\d+(\.\d{1,2})?$/;
+            if (!regex.test(value.toString())) {
+                throw new Error('Total neto no puede tener más de dos decimales');
+            }
+            return true;
+        })
         .custom((value, { req }) => {
             return value >= req.body.netTotal;
         }).withMessage('Total con impuestos debe ser mayor o igual al total neto'),
@@ -45,7 +59,7 @@ const validateCreateOrder = [
     body('comment')
         .optional()
         .isString().withMessage('Comentario debe ser texto')
-        .isLength({ min:10,max: 500 }).withMessage('El comentario debe tener entre 10 y 500 caracteres'),
+        .isLength({ min: 10, max: 100 }).withMessage('El comentario debe tener entre 10 y 50 caracteres'),
 ];
 
 // Validaciones para la actualización de pedido
@@ -67,6 +81,29 @@ const validateUpdateOrder = [
     body('discountApplied')
         .optional()
         .isFloat({ min: 0, max: 100 }).withMessage('Descuento debe ser un número entre 0 y 100'),
+
+    body('netTotal')
+        .isFloat({ min: 0 }).withMessage('Total neto debe ser un número positivo')
+        .custom((value) => {
+            const regex = /^\d+(\.\d{1,2})?$/;
+            if (!regex.test(value.toString())) {
+                throw new Error('Total neto no puede tener más de dos decimales');
+            }
+            return true;
+        }),
+
+    body('totalWithTax')
+        .isFloat({ min: 0 }).withMessage('Total con impuestos debe ser un número positivo')
+        .custom((value) => {
+            const regex = /^\d+(\.\d{1,2})?$/;
+            if (!regex.test(value.toString())) {
+                throw new Error('Total neto no puede tener más de dos decimales');
+            }
+            return true;
+        })
+        .custom((value, { req }) => {
+            return value >= req.body.netTotal;
+        }).withMessage('Total con impuestos debe ser mayor o igual al total neto'),
 
     body('status')
         .optional()
@@ -103,22 +140,22 @@ const validateGetAllOrders = [
         .optional()
         .isIn(['Pendiente', 'En proceso', 'Enviado', 'Cancelado'])
         .withMessage('Estado inválido'),
-    
+
     query('startDate')
         .optional()
         .isISO8601()
         .withMessage('Fecha inicial inválida'),
-    
+
     query('endDate')
         .optional()
         .isISO8601()
         .withMessage('Fecha final inválida'),
-        
+
     query('page')
         .optional()
         .isInt({ min: 1 })
         .withMessage('Página inválida'),
-        
+
     query('limit')
         .optional()
         .isInt({ min: 1, max: 100 })
