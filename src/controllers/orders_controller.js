@@ -134,11 +134,11 @@ const createOrder = async (req, res) => {
             stockUpdateDetails.status = "Éxito";
             stockUpdateDetails.message = `Stock actualizado para ${bulkResult.modifiedCount} productos.`;
         } else {
-             return res.status(400).json({
+            return res.status(400).json({
                 status: "error",
                 code: "INVALID_OPERATION",
                 msg: "No se prepararon operaciones de stock válidas (posiblemente productos no encontrados o cantidades inválidas)."
-             });
+            });
         }
 
         // 4. Crear la Orden
@@ -201,7 +201,7 @@ const createOrder = async (req, res) => {
                 console.error("¡Error Crítico! Falló la reversión del stock en catch de createOrder:", revertError);
             }
         } else if (stockUpdateDetails.status === "Conflicto") {
-             errorResponse.info.reversionStatus = stockUpdateDetails.reversion || "Reversión manejada en conflicto de stock.";
+            errorResponse.info.reversionStatus = stockUpdateDetails.reversion || "Reversión manejada en conflicto de stock.";
         } else {
             errorResponse.info.reversionStatus = "No se requirió reversión de stock (fallo antes de la actualización).";
         }
@@ -452,7 +452,7 @@ const updateStateOrder = async (req, res) => {
         // Validar que el status sea uno de los permitidos por el enum del modelo
         const allowedStatus = Orders.schema.path('status').enumValues;
         if (!allowedStatus.includes(status)) {
-             return res.status(400).json({
+            return res.status(400).json({
                 status: "error",
                 code: "INVALID_FORMAT",
                 msg: `Estado inválido: '${status}'. Los estados permitidos son: ${allowedStatus.join(', ')}.`
@@ -477,7 +477,7 @@ const updateStateOrder = async (req, res) => {
             });
         }
         if (orderExists.status === "Cancelado") {
-             return res.status(400).json({
+            return res.status(400).json({
                 status: "error",
                 code: "INVALID_OPERATION",
                 msg: "No se puede cambiar el estado de una orden 'Cancelado'."
@@ -616,9 +616,9 @@ const deleteOrder = async (req, res) => {
             code: "ORDER_CANCELLED",
             msg: "Orden cancelada con éxito y stock restaurado (si aplica).",
             data: { // Devolver la orden cancelada
-                 _id: orderToCancel._id,
-                 status: orderToCancel.status,
-                 lastUpdate: orderToCancel.lastUpdate
+                _id: orderToCancel._id,
+                status: orderToCancel.status,
+                lastUpdate: orderToCancel.lastUpdate
             },
             info: { stockRestoreDetails }
         });
@@ -644,8 +644,8 @@ const deleteOrder = async (req, res) => {
         }
         // Si el error fue por fallo en restauración de stock, ya se lanzó antes
         if (error.message.startsWith('Fallo al restaurar stock')) {
-             errorResponse.code = "STOCK_RESTORATION_FAILED";
-             errorResponse.msg = "Error crítico al intentar restaurar el stock. La orden no fue cancelada.";
+            errorResponse.code = "STOCK_RESTORATION_FAILED";
+            errorResponse.msg = "Error crítico al intentar restaurar el stock. La orden no fue cancelada.";
         }
 
         return res.status(500).json(errorResponse);
@@ -694,7 +694,7 @@ const SeeAllOrders = async (req, res) => {
         const [clients, sellers, products] = await Promise.all([
             Clients.find({ Ruc: { $in: customerRUCs } }).select("Name Ruc Address telephone email credit state").lean(),
             Sellers.find({ _id: { $in: sellerIds } }).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
-            Products.find({ id: { $in: productIds } }).select("id product_name measure price").lean()
+            Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
         ]);
 
         const clientMap = clients.reduce((map, client) => { map[client.Ruc] = client; return map; }, {});
@@ -764,7 +764,7 @@ const SeeOrderById = async (req, res) => {
         const [clientDetails, sellerDetails, productsDetails] = await Promise.all([
             Clients.findOne({ Ruc: customerRuc }).select("Name Ruc Address telephone email credit state").lean(),
             Sellers.findById(sellerId).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
-            Products.find({ id: { $in: productIds } }).select("id product_name measure price").lean()
+            Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
         ]);
 
         const productMap = productsDetails ? productsDetails.reduce((map, product) => { map[product.id] = product; return map; }, {}) : {};
