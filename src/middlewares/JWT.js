@@ -136,8 +136,22 @@ const verificarEstadoToken = async (req, res) => {
     }
 }
 
+const authorizeRole = (rolesPermitidos) => (req, res, next) => {
+    // Detecta el rol según el usuario cargado por verificarAutenticacion
+    const userRole = req.veterinarioBDD?.role || req.SellerBDD?.role;
+    if (!rolesPermitidos.includes(userRole)) {
+        return res.status(403).json({
+            status: "error",
+            code: "FORBIDDEN",
+            msg: "No tienes permiso para acceder a este recurso."
+        });
+    }
+    next();
+};
+
 export {
     generarJWT,
     verificarAutenticacion,
-    verificarEstadoToken
+    verificarEstadoToken,
+    authorizeRole
 }

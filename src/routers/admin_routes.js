@@ -13,7 +13,7 @@ import {
     newPassword
 } from '../controllers/Seller_controller.js'
 import {login_admin, recovery_pass_admin} from '../controllers/admin_controller.js'
-import { verificarAutenticacion } from '../middlewares/JWT.js'
+import { verificarAutenticacion,authorizeRole } from '../middlewares/JWT.js'
 import { 
     validateCreateSeller, 
     validateUpdateSeller,
@@ -40,20 +40,20 @@ router.post('/recovery-password-admin',validateAdminPasswordRecovery,validateReq
 
 //* Rutas Géstión Vendedores
 // Ruta para registrar 
-router.post('/register',verificarAutenticacion,validateCreateSeller,validateRequest,registerSeller)
+router.post('/register',verificarAutenticacion,authorizeRole(['admin']),validateCreateSeller,validateRequest,registerSeller)
 router.get('/confirm-account/:token',validatePasswordRecoveryToken,validateRequest,confirmEmail)
 router.post('/login',validateSellerLogin,validateRequest,loginSeller)
 router.post('/recovery-password',validateSellerPasswordRecoveryRequest,validateRequest,passwordRecovery)
 router.get('/recovery-password/:token',validatePasswordRecoveryToken,validateRequest,tokenComprobation)
 router.post('/recovery-password/:token',validateNewPassword,validateRequest,newPassword)
 // Ruta para ver
-router.get('/sellers', verificarAutenticacion, seeSellers)
+router.get('/sellers', verificarAutenticacion,authorizeRole(['admin']), seeSellers)
 // Rutas para Buscar
-router.get('/sellers-numberid/:cedula', verificarAutenticacion,validateFindSellerByNumberId,validateRequest, searchSellerByNumberId)
-router.get('/sellers/:id', verificarAutenticacion,validateFindSellerById,validateRequest, searchSellerById)
+router.get('/sellers-numberid/:cedula', verificarAutenticacion,authorizeRole(['admin']),validateFindSellerByNumberId,validateRequest, searchSellerByNumberId)
+router.get('/sellers/:id', verificarAutenticacion,authorizeRole(['admin']),validateFindSellerById,validateRequest, searchSellerById)
 // Rutas para actualizar 
-router.patch("/updateSeller/:id", verificarAutenticacion,validateUpdateSeller,validateRequest, updateSellerController)
+router.patch("/updateSeller/:id", verificarAutenticacion,authorizeRole(['admin']),validateUpdateSeller,validateRequest, updateSellerController)
 // Ruta para Eliminar 
-router.delete("/deleteSellerinfo/:id", verificarAutenticacion,validateFindSellerById, validateRequest, DeleteSellerController)
+router.delete("/deleteSellerinfo/:id", verificarAutenticacion,authorizeRole(['admin']),validateFindSellerById, validateRequest, DeleteSellerController)
 
 export default router
