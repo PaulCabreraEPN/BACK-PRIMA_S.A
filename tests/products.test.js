@@ -38,7 +38,8 @@ describe('[Products Registration / Routes]',() => {
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .field('id',44444)
             .field('product_name','APPLE')
-            .field('measure','UND')
+            .field('reference','407/10B')
+            .field('description','Fuji Red Apple')
             .field('price',0.50)
             .field('stock',100)
             .attach('image','tests/testImages/fuji-red.jpg')
@@ -52,13 +53,15 @@ describe('[Products Registration / Routes]',() => {
         const response = await request
             .post('/products/register')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
-            .field('id',71071812)
+            .field('id',71022)
             .field('product_name','APPLE')
-            .field('measure','UND')
+            .field('reference','407/10B')
+            .field('description','Fuji Red Apple')
             .field('price',0.50)
             .field('stock',100)
             .attach('image','tests/testImages/fuji-red.jpg')
         // Assert
+
         expect(response.status).toEqual(expected)
     })
     it('Should return 400 on creating a product witout an image',async () => {
