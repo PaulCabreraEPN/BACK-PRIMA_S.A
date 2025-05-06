@@ -6,10 +6,10 @@ import { validateRequest } from '../middlewares/validator_middleware.js';
 
 const router = Router()
 
-router.post('/clients/register',verificarAutenticacion,authorizeRole(['admin']),validateCreateClient,validateRequest,RegisterClient)
+router.post('/clients/register',verificarAutenticacion,authorizeRole(['admin','Seller']),validateCreateClient,validateRequest,RegisterClient)
 router.get('/clients',verificarAutenticacion,authorizeRole(['admin','Seller']),getAllClients )
 router.get('/clients/:ruc',verificarAutenticacion,authorizeRole(['admin','Seller']),validateGetClient,validateRequest,getClientsById)
-router.patch('/clients/update/:ruc',verificarAutenticacion,authorizeRole(['admin']),validateUpdateClient,validateRequest,UpdateClient)
+router.patch('/clients/update/:ruc',verificarAutenticacion,authorizeRole(['admin','Seller']),validateUpdateClient,validateRequest,UpdateClient)
 router.delete('/clients/delete/:id',verificarAutenticacion,authorizeRole(['admin']),validateDeleteClient,validateRequest,DeleteClient)
 
 export default router
