@@ -13,6 +13,9 @@ export const validateCreateClient = [
     body('Name')
         .notEmpty().withMessage('El nombre es obligatorio')
         .isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres'),
+    body('ComercialName')
+        .notEmpty().withMessage('El nombre comercial es obligatorio')
+        .isLength({ min: 3 }).withMessage('El nombre comercial debe tener al menos 3 caracteres'),
     body('Address')
         .notEmpty().withMessage('La dirección es obligatoria')
         .isLength({ min: 8,max:200 }).withMessage('La dirección debe tener al menos 8 caracteres maximo 200'),
@@ -61,6 +64,9 @@ export const validateUpdateClient = [
     body('Name')
         .optional()
         .isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres'),
+    body('ComercialName')
+        .optional()
+        .isLength({ min: 3 }).withMessage('El nombre comercial debe tener al menos 3 caracteres'),
     body('Address')
         .optional()
         .isLength({ min: 8,max:200 }).withMessage('La dirección debe tener al menos 8 caracteres maximo 200'),
