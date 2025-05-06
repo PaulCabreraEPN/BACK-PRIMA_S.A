@@ -38,14 +38,15 @@ describe('[Clients Registration / Routes]',() => {
         const response = await request
             .post('/clients/register')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
-            .send({
-                "Ruc":"1790012345001",
+            .send( {
+                "Name": "Electrodomésticos Modernos S.A.",
+                "ComercialName": "ElectroModerna",
+                "Ruc": "0512889619001",
+                "Address": "Av. Amazonas N35-25 y Juan Pablo Sanz",
                 "telephone": "0987654321",
-                "email": "ventasso@lucionesec.com",
-                "credit": "Contado",
-                "state": "al día",
-                "Address": "Av. Amazonas y Patria, Quito",
-                "Name": "Soluciones Ecuador"
+                "email": "infoxd@electromoderna.ec",
+                "credit": "60 días",
+                "state": "en deuda"
             })
         // Assert
         expect(response.status).toEqual(expected)
@@ -106,7 +107,7 @@ describe('[Clients Search / Routes]',() => {
         const expected = 200
         // Act
         const response = await request
-            .get('/clients/1790012345001')
+            .get('/clients/0512889619001')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
         // Assert
         expect(response.status).toEqual(expected)
@@ -121,7 +122,7 @@ describe('[Clients Update / Routes]',() => {
 
         // Act
         const response = await request
-            .patch('/clients/update/1790012345001')
+            .patch('/clients/update/0512889619001')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send({
                 "credit": "Credito",
