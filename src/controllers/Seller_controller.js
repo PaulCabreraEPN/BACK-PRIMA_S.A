@@ -691,6 +691,22 @@ const DeleteSellerController = async (req, res) => {
             });
         }
 
+        // Validar si el vendedor tiene órdenes activas (no Enviado ni Cancelado)
+        const Orders = (await import('../models/orders.js')).default;
+        const activeOrder = await Orders.findOne({
+            seller: id,
+            status: { $nin: ["Enviado", "Cancelado"] }
+        });
+
+        if (activeOrder) {
+            return res.status(400).json({
+                status: "error",
+                code: "SELLER_HAS_ACTIVE_ORDERS",
+                msg: "No se puede eliminar el vendedor porque tiene órdenes activas (no Enviado ni Cancelado).",
+                info: { orderId: activeOrder._id, orderStatus: activeOrder.status }
+            });
+        }
+
         //* Paso 3 - Interactuar con BDD
         // Buscar y eliminar el vendedor en la base de datos
         const deletedSeller = await Sellers.findByIdAndDelete(id);
