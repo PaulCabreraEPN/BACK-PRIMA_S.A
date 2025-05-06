@@ -51,11 +51,11 @@ describe('[Orders Registration / Routes]', () => {
                 "customer": "0659790190001", 
                 "products": [
                     {
-                        "productId": "55055012",
+                        "productId": "55005",
                         "quantity": 1
                     },
                     {
-                        "productId": "55055025",
+                        "productId": "55002",
                         "quantity": 5
                     }
                 ],
@@ -294,11 +294,11 @@ describe('[Orders Update / Routes]', () => {
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55002,
                         "quantity": 1
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55005,
                         "quantity": 5
                     }
                 ],
@@ -351,11 +351,11 @@ describe('[Orders Update / Routes]', () => {
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55005,
                         "quantity": 1
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55002,
                     }
                 ],
                 "discountApplied": 10.5,
@@ -377,11 +377,11 @@ describe('[Orders Update / Routes]', () => {
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55005,
                         "quantity": 5
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55002,
                         "quantity": 55
                     }
                 ],
@@ -404,11 +404,11 @@ describe('[Orders Update / Routes]', () => {
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55002,
                         "quantity": 1
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55005,
                         "quantity": 5
                     }
                 ],
@@ -441,15 +441,15 @@ describe('[Orders Update / Routes]', () => {
         // Act
         const response = await request
             .patch('/orders/update/6808583b4d09064b2cc9f291')
-            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55002,
                         "quantity": 1
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55005,
                         "quantity": 5
                     }
                 ],
@@ -465,7 +465,7 @@ describe('[Orders Update / Routes]', () => {
             .send({
                 "status": "Pendiente"
             })
-
+            
         // Assert
         expect(response.status).toEqual(expected)
     })
@@ -475,15 +475,15 @@ describe('[Orders Update / Routes]', () => {
         // Act
         const response = await request
             .patch('/orders/update/6808583b4d09064b2cc9f291')
-            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
+            .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
                 "products": [
                     {
-                        "productId": 55055012,
+                        "productId": 55005,
                         "quantity": 1000000
                     },
                     {
-                        "productId": 55055025,
+                        "productId": 55002,
                         "quantity": 1000000
                     }
                 ],
@@ -518,7 +518,7 @@ describe('[Orders Delete / Routes]', () => {
         // Act
         const response = await request
             .delete(`/orders/delete/${ORDER_ID}`)
-            .set('Authorization', `Bearer ${SELLER_TOKEN}`)
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
         // Assert  
         expect(response.status).toEqual(expected)
     })
@@ -528,7 +528,7 @@ describe('[Orders Delete / Routes]', () => {
         // Act
         const response = await request
             .delete('/orders/delete/6808382f9ab87e70de1573b6')
-            .set('Authorization', `Bearer ${SELLER_TOKEN}`)
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
 
         // Assert
         expect(response.status).toEqual(expected)
@@ -539,7 +539,7 @@ describe('[Orders Delete / Routes]', () => {
         // Act
         const response = await request
             .delete('/orders/delete/680921e29946e7abad0edd6d')
-            .set('Authorization', `Bearer ${SELLER_TOKEN}`)
+            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
 
         // Assert
         expect(response.status).toEqual(expected)
