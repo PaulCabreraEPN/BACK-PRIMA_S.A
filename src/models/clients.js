@@ -5,6 +5,11 @@ const ClientSchema = new Schema({
         type:String,
         required:true,
     },
+    ComercialName:{
+        type:String,
+        required:true,
+        trim:true
+    },
     Ruc:{
         type:Number,
         required:true,

@@ -1,4 +1,5 @@
 import Clients from '../models/clients.js';
+import Orders from '../models/orders.js';
 
 const RegisterClient = async (req, res) => {
     try {
@@ -39,6 +40,7 @@ const RegisterClient = async (req, res) => {
         const clientData = {
             _id: newClient._id,
             Name: newClient.Name,
+            ComercialName: newClient.ComercialName,
             Ruc: newClient.Ruc,
             Address: newClient.Address,
             telephone: newClient.telephone,
@@ -67,7 +69,7 @@ const RegisterClient = async (req, res) => {
 const getAllClients = async (req, res) => {
     try {
         // Excluir _id si no se necesita, pero incluir otros campos necesarios
-        const clientsBDD = await Clients.find().select("Name Ruc Address telephone email credit state"); // Ajusta los campos según necesidad
+        const clientsBDD = await Clients.find().select("Name ComercialName Ruc Address telephone email credit state"); // Ajusta los campos según necesidad
         return res.status(200).json({
             status: "success",
             code: "CLIENTS_FETCHED",
@@ -99,7 +101,7 @@ const getClientsById = async (req, res) => {
         }
 
         //* Paso 3 - Interactuar con BDD
-        const client = await Clients.findOne({ Ruc: ruc }).select("Name Ruc Address telephone email credit state"); // Seleccionar campos
+        const client = await Clients.findOne({ Ruc: ruc }).select("Name ComercialName Ruc Address telephone email credit state"); // Seleccionar campos
         if (!client) {
             return res.status(404).json({
                 status: "error",
@@ -151,7 +153,7 @@ const UpdateClient = async (req, res) => {
 
 
         // Obtener los atributos válidos del modelo (mejor si se define explícitamente)
-        const validFields = ['Name', 'Address', 'telephone', 'email', 'credit', 'state'];
+        const validFields = ['Name','ComercialName', 'Address', 'telephone', 'email', 'credit', 'state'];
         const filteredUpdates = {};
 
         // Filtrar los campos válidos para la actualización
@@ -171,7 +173,7 @@ const UpdateClient = async (req, res) => {
         }
 
         // Actualizar el cliente
-        const clientToUpdate = await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates, { new: true }).select("Name Ruc Address telephone email credit state"); // Devolver el doc actualizado y seleccionar campos
+        const clientToUpdate = await Clients.findOneAndUpdate({ Ruc: ruc }, filteredUpdates, { new: true }).select("Name ComercialName Ruc Address telephone email credit state"); // Devolver el doc actualizado y seleccionar campos
 
         if (!clientToUpdate) {
             return res.status(404).json({
@@ -208,11 +210,18 @@ const DeleteClient = async (req, res) => {
                 msg: "El parámetro 'id' es obligatorio."
             });
         }
-        // Podría añadirse validación de formato de ObjectId si es necesario
+        // Validar formato de ObjectId si es necesario
+        if (!id.match(/^[0-9a-fA-F]{24}$/)) {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: `El ID '${id}' no tiene un formato válido.`
+            });
+        }
 
-        const deletedClient = await Clients.findByIdAndDelete(id);
-
-        if (!deletedClient) {
+        // Buscar el cliente para obtener su RUC
+        const client = await Clients.findById(id);
+        if (!client) {
             return res.status(404).json({
                 status: "error",
                 code: "NOT_FOUND",
@@ -220,15 +229,31 @@ const DeleteClient = async (req, res) => {
             });
         }
 
+        // Validar si el cliente tiene órdenes activas (no Enviado ni Cancelado)
+        const activeOrder = await Orders.findOne({
+            customer: client.Ruc,
+            status: { $nin: ["Enviado", "Cancelado"] }
+        });
+
+        if (activeOrder) {
+            return res.status(400).json({
+                status: "error",
+                code: "CLIENT_HAS_ACTIVE_ORDERS",
+                msg: "No se puede eliminar el cliente porque tiene órdenes activas (no Enviado ni Cancelado).",
+                info: { orderId: activeOrder._id, orderStatus: activeOrder.status }
+            });
+        }
+
+        const deletedClient = await Clients.findByIdAndDelete(id);
+
         return res.status(200).json({
             status: "success",
             code: "CLIENT_DELETED",
             msg: "Cliente eliminado con éxito."
-            // No se suele devolver data en delete exitoso
         });
     } catch (error) {
         //console.error("Error en DeleteClient:", error); // Log interno
-         // Manejar error específico si el ID no es un ObjectId válido
+        // Manejar error específico si el ID no es un ObjectId válido
         if (error.name === 'CastError' && error.kind === 'ObjectId') {
             return res.status(400).json({
                 status: "error",
