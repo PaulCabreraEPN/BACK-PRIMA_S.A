@@ -232,10 +232,10 @@ const loginSeller = async (req, res) => {
         const sellerInfo = {
             _id: SellerBDD._id,
             username: SellerBDD.username,
+            cedula: SellerBDD.cedula,
             email: SellerBDD.email,
             names: SellerBDD.names,
             lastNames: SellerBDD.lastNames,
-            role: SellerBDD.role,
             SalesCity: SellerBDD.SalesCity
         };
 
