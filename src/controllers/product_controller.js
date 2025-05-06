@@ -8,14 +8,14 @@ const CreateProduct = async (req, res) => {
 
     try {
         //* Tomar los datos del body
-        const { id, product_name, measure, price, stock } = req.body;
+        const { id, product_name, reference, price, stock,description } = req.body;
 
         // --- Validaciones ---
-        if (!id || !product_name || !measure || price == null || stock == null) {
+        if (!id || !product_name || !reference || price == null || stock == null || !description) {
             return res.status(400).json({
                 status: "error",
                 code: "MISSING_FIELD",
-                msg: "Campos requeridos: id, product_name, measure, price, stock."
+                msg: "Campos requeridos: id, product_name, reference, description, price, stock."
             });
         }
         if (isNaN(id) || isNaN(price) || isNaN(stock)) {
@@ -62,7 +62,8 @@ const CreateProduct = async (req, res) => {
         const productData = {
             id,
             product_name,
-            measure,
+            reference,
+            description,
             price,
             stock,
             imgUrl: newImageUrl || '' // Asignar URL si existe
@@ -79,7 +80,8 @@ const CreateProduct = async (req, res) => {
         const responseProduct = {
             id: savedProduct.id,
             product_name: savedProduct.product_name,
-            measure: savedProduct.measure,
+            reference: savedProduct.reference,
+            description: savedProduct.description,
             price: savedProduct.price,
             stock: savedProduct.stock,
             imgUrl: savedProduct.imgUrl
@@ -123,7 +125,7 @@ const CreateProduct = async (req, res) => {
 const getAllProducts = async (req, res) => {
     try {
         // Excluir _id y __v si no se necesitan
-        const productsBDD = await Products.find().select("id product_name measure price stock imgUrl -_id");
+        const productsBDD = await Products.find().select("id product_name reference description price stock imgUrl -_id");
         return res.status(200).json({
             status: "success",
             code: "PRODUCTS_FETCHED",
@@ -154,7 +156,7 @@ const getProductsById = async (req, res) => {
     }
 
     try {
-        const productBDD = await Products.findOne({ id: Number(id) }).select("id product_name measure price stock imgUrl -_id"); // Convertir id a número
+        const productBDD = await Products.findOne({ id: Number(id) }).select("id product_name reference description price stock imgUrl -_id"); // Convertir id a número
         if (!productBDD) {
             return res.status(404).json({
                 status: "error",
@@ -223,7 +225,7 @@ const updatedProduct = async (req, res) => {
         oldImageUrl = productExists.imgUrl; // Guardar URL anterior
 
         // Campos que se pueden actualizar y validaciones
-        const { product_name, measure, price, stock } = req.body;
+        const { product_name, reference,description, price, stock } = req.body;
         const updateData = {};
         const fieldsUpdated = [];
 
@@ -242,7 +244,8 @@ const updatedProduct = async (req, res) => {
             fieldsUpdated.push('stock');
         }
         if (product_name !== undefined) { updateData.product_name = product_name; fieldsUpdated.push('product_name'); }
-        if (measure !== undefined) { updateData.measure = measure; fieldsUpdated.push('measure'); }
+        if (reference !== undefined) { updateData.reference = reference; fieldsUpdated.push('reference'); }
+        if (description !== undefined) { updateData.description = description; fieldsUpdated.push('description'); }
 
         // Procesar imagen si existe
         if (newImageUrl) {
@@ -276,7 +279,7 @@ const updatedProduct = async (req, res) => {
         }
 
         // Ejecutar la actualización
-        const updatedProductDoc = await Products.findOneAndUpdate({ id: id }, updateData, { new: true }).select("id product_name measure price stock imgUrl -_id").lean();
+        const updatedProductDoc = await Products.findOneAndUpdate({ id: id }, updateData, { new: true }).select("id product_name reference description price stock imgUrl -_id").lean();
 
         updateInfo.fieldsUpdated = fieldsUpdated;
         updateInfo.imageAction = imageAction;

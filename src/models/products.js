@@ -6,12 +6,17 @@ const ProductSchema = new Schema({
         required:true,
         unique:true
     },
+    reference:{
+        type:String,
+        required:true,
+        trim:true
+    },
     product_name:{
         type:String,
         required:true,
         trim:true
     },
-    measure:{
+    description:{
         type:String,
         required:true,
         trim:true
