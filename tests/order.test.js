@@ -48,7 +48,7 @@ describe('[Orders Registration / Routes]', () => {
             .post('/orders/create')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
-                "customer": "0659790190001", 
+                "customer": "1792837465001", 
                 "products": [
                     {
                         "productId": "55005",
@@ -63,7 +63,7 @@ describe('[Orders Registration / Routes]', () => {
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
             })
-        ORDER_ID = response.body.data._id    
+        ORDER_ID = response.body.data._id
         // Assert
         expect(response.status).toEqual(expected)
     })
