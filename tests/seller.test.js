@@ -35,7 +35,6 @@ describe('[Seller Public Endpoints]', () => {
                     username: process.env.SELLER_USER,
                     password: 'wrong_password'
                 })
-                console.log(response.body)
             expect(response.status).toBe(401)
         })
 
