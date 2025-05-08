@@ -31,10 +31,6 @@ export const validateCreateClient = [
         .notEmpty().withMessage('El correo electrónico es obligatorio')
         .isEmail().withMessage('El correo electrónico no es válido')
         .isLength({ max: 100 }).withMessage('El correo electrónico no debe exceder los 100 caracteres'),
-    body('credit')
-        .notEmpty().withMessage('El crédito es obligatorio')
-        .isString().withMessage('El crédito debe ser un texto')
-        .isLength({ min:4, max: 10 }).withMessage('El crédito debe tener entre 4 y 10 caracteres'),
     body('state')
         .notEmpty().withMessage('El estado es obligatorio')
         .isString().withMessage('El estado debe ser un texto')
@@ -82,10 +78,6 @@ export const validateUpdateClient = [
         .optional()
         .isEmail().withMessage('El correo electrónico no es válido')
         .isLength({ max: 100 }).withMessage('El correo electrónico no debe exceder los 100 caracteres'),
-    body('credit')
-        .optional()
-        .isString().withMessage('El crédito debe ser un texto')
-        .isLength({ min:4, max: 10 }).withMessage('El crédito debe tener entre 4 y 10 caracteres'),
     body('state')
         .optional()
         .isString().withMessage('El estado debe ser un texto')

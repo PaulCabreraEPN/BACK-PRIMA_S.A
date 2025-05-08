@@ -30,6 +30,11 @@ const validateCreateOrder = [
     body('products.*.quantity')
         .isInt({ min: 1 }).withMessage('Cantidad debe ser un número entero positivo'),
 
+    body('credit')
+        .notEmpty().withMessage('El tipo de crédito es requerido')
+        .isIn(['Contado 15 días', 'Crédito 30 días'])
+        .withMessage('El tipo de crédito debe ser "Contado 15 días" o "Crédito 30 días"'),
+
     body('discountApplied')
         .isFloat({ min: 0, max: 100 }).withMessage('Descuento debe ser un número entre 0 y 100'),
 
@@ -77,6 +82,11 @@ const validateUpdateOrder = [
                     product.quantity > 0;
             });
         }).withMessage('Productos inválidos'),
+
+    body('credit')
+        .optional()
+        .isIn(['Contado 15 días', 'Crédito 30 días'])
+        .withMessage('El tipo de crédito debe ser "Contado 15 días" o "Crédito 30 días"'),
 
     body('discountApplied')
         .optional()

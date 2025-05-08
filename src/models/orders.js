@@ -35,6 +35,12 @@ const orderSchema = new Schema({
         type: Number,
         required: true
     },
+    credit: {
+        type: String,
+        required: true,
+        enum: ['Contado 15 días', 'Crédito 30 días'],
+        default: 'Contado 15 días'
+    },
     status: {
         type: String,
         enum: ['Pendiente', 'En proceso', 'Enviado','Cancelado'],
