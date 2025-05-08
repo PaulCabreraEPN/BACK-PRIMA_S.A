@@ -5,7 +5,8 @@ const patron = /^[A-Za-z0-9.\-/ ]+$/;
 
 export const createProductValidator = [
     body('id')
-        .notEmpty().withMessage('El id es obligatorio').isNumeric().withMessage('El id debe ser un número'),
+        .notEmpty().withMessage('El id es obligatorio').isNumeric().withMessage('El id debe ser un número')
+        .isLength({ min: 1, max: 10 }).withMessage('El id debe tener entre 1 y 10 caracteres'),
     body('product_name')
         .notEmpty().withMessage('El nombre es obligatorio')
         .isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres')
