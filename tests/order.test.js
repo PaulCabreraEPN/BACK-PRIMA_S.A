@@ -62,6 +62,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
+                "credit": "Contado 15 días"
             })
         ORDER_ID = response.body.data._id
         // Assert
@@ -101,7 +102,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": -10.5,
                 "netTotal": -7.79,
                 "totalWithTax": -10.67,
-                "comment": ""
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -129,7 +130,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "comment": ""
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -157,7 +158,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "comment": ""
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -185,6 +186,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
+                "credit": "Contado 15 días"
             })
         // Assert
         expect(response.status).toEqual(expected)
@@ -211,6 +213,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -305,7 +308,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -335,7 +339,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -361,7 +366,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -388,7 +394,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": -10.5,
                 "netTotal": -7.8,
                 "totalWithTax": -8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -415,7 +422,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
@@ -456,7 +464,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         await request
@@ -490,7 +499,8 @@ describe('[Orders Update / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
-                "comment": "Nueva Actualizacion"
+                "comment": "Nueva Actualizacion",
+                "credit": "Contado 15 días"
             })
 
         // Assert
