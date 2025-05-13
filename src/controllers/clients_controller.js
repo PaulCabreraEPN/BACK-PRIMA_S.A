@@ -45,7 +45,6 @@ const RegisterClient = async (req, res) => {
             Address: newClient.Address,
             telephone: newClient.telephone,
             email: newClient.email,
-            credit: newClient.credit,
             state: newClient.state,
         };
 
@@ -69,7 +68,7 @@ const RegisterClient = async (req, res) => {
 const getAllClients = async (req, res) => {
     try {
         // Excluir _id si no se necesita, pero incluir otros campos necesarios
-        const clientsBDD = await Clients.find().select("Name ComercialName Ruc Address telephone email credit state"); // Ajusta los campos según necesidad
+        const clientsBDD = await Clients.find().select("Name ComercialName Ruc Address telephone email state"); // Ajusta los campos según necesidad
         return res.status(200).json({
             status: "success",
             code: "CLIENTS_FETCHED",
@@ -101,7 +100,7 @@ const getClientsById = async (req, res) => {
         }
 
         //* Paso 3 - Interactuar con BDD
-        const client = await Clients.findOne({ Ruc: ruc }).select("Name ComercialName Ruc Address telephone email credit state"); // Seleccionar campos
+        const client = await Clients.findOne({ Ruc: ruc }).select("Name ComercialName Ruc Address telephone email state"); // Seleccionar campos
         if (!client) {
             return res.status(404).json({
                 status: "error",
@@ -153,7 +152,7 @@ const UpdateClient = async (req, res) => {
 
 
         // Obtener los atributos válidos del modelo (mejor si se define explícitamente)
-        const validFields = ['Name','ComercialName', 'Address', 'telephone', 'email', 'credit', 'state'];
+        const validFields = ['Name','ComercialName', 'Address', 'telephone', 'email','state'];
         const filteredUpdates = {};
 
         // Filtrar los campos válidos para la actualización
