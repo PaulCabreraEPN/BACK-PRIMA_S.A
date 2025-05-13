@@ -11,7 +11,7 @@ const createOrder = async (req, res) => {
     let stockUpdateDetails = {};
 
     try {
-        const { customer, products: inputProducts, discountApplied, netTotal, totalWithTax, comment } = req.body;
+        const { customer, products: inputProducts, discountApplied, netTotal, totalWithTax, comment,credit } = req.body;
 
         // --- Validaciones Iniciales ---
         if (!customer || !inputProducts || !Array.isArray(inputProducts) || inputProducts.length === 0 || discountApplied == null || netTotal == null || totalWithTax == null) {
@@ -149,6 +149,7 @@ const createOrder = async (req, res) => {
             netTotal,
             totalWithTax,
             comment,
+            credit,
             seller: req.SellerBDD._id // Asumiendo que el middleware de autenticación lo añade
         });
         const savedDoc = await newOrder.save();
@@ -161,6 +162,7 @@ const createOrder = async (req, res) => {
             discountApplied: savedDoc.discountApplied,
             netTotal: savedDoc.netTotal,
             totalWithTax: savedDoc.totalWithTax,
+            credit: savedDoc.credit,
             status: savedDoc.status,
             comment: savedDoc.comment,
             registrationDate: savedDoc.registrationDate,
@@ -218,7 +220,7 @@ const updateOrder = async (req, res) => {
 
     try {
         const { id } = req.params;
-        const { products: newProductsData, discountApplied, netTotal, totalWithTax, comment } = req.body;
+        const { products: newProductsData, discountApplied, netTotal, totalWithTax, comment, credit } = req.body;
 
         // --- Validaciones Iniciales ---
         if (!mongoose.Types.ObjectId.isValid(id)) {
@@ -360,6 +362,7 @@ const updateOrder = async (req, res) => {
             discountApplied,
             netTotal,
             totalWithTax,
+            credit,
             lastUpdate: new Date()
         };
         if (comment !== undefined) { filteredUpdates.comment = comment; }
@@ -375,6 +378,7 @@ const updateOrder = async (req, res) => {
             totalWithTax: updatedOrderDoc.totalWithTax,
             status: updatedOrderDoc.status,
             comment: updatedOrderDoc.comment,
+            credit: updatedOrderDoc.credit,
             registrationDate: updatedOrderDoc.registrationDate,
             lastUpdate: updatedOrderDoc.lastUpdate,
             seller: updatedOrderDoc.seller
