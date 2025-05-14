@@ -1,5 +1,4 @@
 import { body, param } from 'express-validator'
-import validator from 'ecuador-validator';
 
 const patron = /^[A-Za-z0-9.\-/ ]+$/;
 
