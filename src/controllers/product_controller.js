@@ -121,47 +121,28 @@ const CreateProduct = async (req, res) => {
     }
 }
 
-//* Obtener todos los productos con paginación
+//* Obtener todos los productos
 const getAllProducts = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+        const productsBDD = await Products.find()
+            .select("id product_name reference description price stock imgUrl -_id")
+            .sort({ id: 1 })
+            .lean();
 
-        const totalProducts = await Products.countDocuments();
-        const totalPages = Math.ceil(totalProducts / limit);
-
-        if (totalProducts === 0) {
+        if (productsBDD.length === 0) {
             return res.status(200).json({
                 status: "success",
                 code: "NO_PRODUCTS_FOUND",
                 msg: "No se encontraron productos registrados.",
-                data: [],
-                info: { currentPage: 1, totalPages: 0, totalProducts: 0, limit }
+                data: []
             });
         }
-
-        if (page > totalPages && totalProducts > 0) {
-            return res.status(404).json({
-                status: "error",
-                code: "NOT_FOUND",
-                msg: `Página no encontrada. Solo hay ${totalPages} páginas.`
-            });
-        }
-
-        const productsBDD = await Products.find()
-            .select("id product_name reference description price stock imgUrl -_id")
-            .sort({ id: 1 })
-            .skip(skip)
-            .limit(limit)
-            .lean();
 
         return res.status(200).json({
             status: "success",
             code: "PRODUCTS_FETCHED",
-            msg: `Productos obtenidos para la página ${page}.`,
-            data: productsBDD,
-            info: { currentPage: page, totalPages, totalProducts, limit }
+            msg: "Productos obtenidos correctamente.",
+            data: productsBDD
         });
     } catch (error) {
         console.error("Error en getAllProducts:", error);

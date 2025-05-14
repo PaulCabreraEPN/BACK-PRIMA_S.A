@@ -657,39 +657,21 @@ const deleteOrder = async (req, res) => {
 };
 
 
-//* Ver todas las órdenes (con paginación y detalles relacionados)
+//* Ver todas las órdenes (con detalles relacionados)
 const SeeAllOrders = async (req, res) => {
     try {
-        const page = parseInt(req.query.page) || 1;
-        const limit = parseInt(req.query.limit) || 10;
-        const skip = (page - 1) * limit;
+        const orders = await Orders.find()
+            .sort({ registrationDate: -1 })
+            .lean(); // Usar lean para mejor rendimiento
 
-        const totalOrders = await Orders.countDocuments();
-        const totalPages = Math.ceil(totalOrders / limit);
-
-        if (totalOrders === 0) {
+        if (orders.length === 0) {
             return res.status(200).json({
                 status: "success",
                 code: "NO_ORDERS_FOUND",
                 msg: "No se encontraron órdenes registradas.",
-                data: [],
-                info: { currentPage: 1, totalPages: 0, totalOrders: 0, limit }
+                data: []
             });
         }
-
-        if (page > totalPages && totalOrders > 0) { // Asegurarse que no sea 0/0
-            return res.status(404).json({
-                status: "error",
-                code: "NOT_FOUND",
-                msg: `Página no encontrada. Solo hay ${totalPages} páginas.`
-            });
-        }
-
-        const orders = await Orders.find()
-            .sort({ registrationDate: -1 })
-            .skip(skip)
-            .limit(limit)
-            .lean(); // Usar lean para mejor rendimiento
 
         const customerRUCs = [...new Set(orders.map(order => order.customer))];
         const sellerIds = [...new Set(orders.map(order => order.seller))];
@@ -722,9 +704,8 @@ const SeeAllOrders = async (req, res) => {
         return res.status(200).json({
             status: "success",
             code: "ORDERS_FETCHED",
-            msg: `Órdenes obtenidas para la página ${page}.`,
-            data: formattedOrders,
-            info: { currentPage: page, totalPages, totalOrders, limit }
+            msg: "Órdenes obtenidas correctamente.",
+            data: formattedOrders
         });
 
     } catch (error) {
