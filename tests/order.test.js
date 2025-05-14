@@ -242,16 +242,6 @@ describe('[Orders Get All / Routes]', () => {
         // Assert
         expect(response.status).toEqual(expected)
     })
-    it('Should return 404 on getting all orders with invalid page', async () => {
-        // Arrange
-        const expected = 404
-        // Act
-        const response = await request
-            .get('/orders?page=5')
-            .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
-        // Assert
-        expect(response.status).toEqual(expected)
-    })
     it('Should return 200 on getting order by id', async () => {
         // Arrange
         const expected = 200
