@@ -32,7 +32,7 @@ npm run dev
 La documentación completa está disponible en la carpeta `/docs`:
 
 - [Guía de Inicio](/docs/getting-started/installation.md)
-- [Documentación de API](/docs/api/)
+- [Documentación de API](/docs/API/)
 - [Guía de Desarrollo](/docs/guides/developer.md)
 - [Ejemplos](/docs/examples/)
 
