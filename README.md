@@ -37,8 +37,6 @@ La documentación completa está disponible en la carpeta `/docs`:
 - [Ejemplos](/docs/examples/)
 - [Documentación Con IA](https://deepwiki.com/PaulCabreraEPN/BACK-PRIMA_S.A)
 
-También puede acceder a la documentación interactiva de la API en `/api-docs` cuando el servidor está en ejecución.
-
 ## 🧪 Pruebas
 
 ```bash
