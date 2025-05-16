@@ -35,6 +35,7 @@ La documentación completa está disponible en la carpeta `/docs`:
 - [Documentación de API](/docs/API/)
 - [Guía de Desarrollo](/docs/guides/developer.md)
 - [Ejemplos](/docs/examples/)
+- [Documentación Con IA](https://deepwiki.com/PaulCabreraEPN/BACK-PRIMA_S.A)
 
 También puede acceder a la documentación interactiva de la API en `/api-docs` cuando el servidor está en ejecución.
 
