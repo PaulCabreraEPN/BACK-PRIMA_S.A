@@ -8,11 +8,11 @@ export const validateAdminLogin = [
         .notEmpty().withMessage('El nombre de usuario es requerido')
         .matches(regex)
         .withMessage('Formato de usuario inválido'),
-    
     body('password')
+        .trim()
         .notEmpty().withMessage('La contraseña es requerida')
-        .matches(/^[A-Z0-9]{8}$/)  // Para passwordGeneratorbyAdmin que genera 8 caracteres mayúsculas/números
-        .withMessage('Formato de contraseña inválido')
+        .matches(/^[A-Z0-9]{8}$/)
+        .withMessage('Formato de contraseña inválido: la contraseña debe tener 8 caracteres y contener al menos una mayúscula, una minúscula y un número')
 ];
 
 
