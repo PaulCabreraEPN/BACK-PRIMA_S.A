@@ -8,7 +8,7 @@ export const createProductValidator = [
         .isLength({ min: 1, max: 10 }).withMessage('El id debe tener entre 1 y 10 caracteres'),
     body('product_name')
         .notEmpty().withMessage('El nombre es obligatorio')
-        .isLength({ min: 3 }).withMessage('El nombre debe tener al menos 3 caracteres')
+        .isLength({ min: 3,max:30 }).withMessage('El nombre debe tener al menos 3 caracteres y máximo 30')
         .custom((value) => {
             if (!patron.test(value)) {
                 throw new Error('El nombre solo puede contener letras, números, guiones y espacios');
@@ -17,7 +17,8 @@ export const createProductValidator = [
         }),
     body('reference')
         .notEmpty().withMessage('La referencia es obligatoria')
-        .isLength({ min: 3 }).withMessage('La referencia debe tener al menos 3 caracteres')
+        .isLength({ min: 3,max:12 }).withMessage('La referencia debe tener al menos 3 caracteres y máximo 12')
+
         .custom((value) => {
             if (!patron.test(value)) {
                 throw new Error('La referencia solo puede contener letras, números, guiones y espacios');
