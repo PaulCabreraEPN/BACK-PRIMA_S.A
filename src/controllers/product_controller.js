@@ -282,11 +282,12 @@ const updatedProduct = async (req, res) => {
 
         // Verificar si hay datos para actualizar
         if (Object.keys(updateData).length === 0) {
+            const updatableFields = ["product_name", "reference", "description", "price", "stock", "imgUrl"];
             return res.status(200).json({ // 200 OK, pero sin cambios efectivos
                 status: "success", // O 'warning' si se prefiere indicar que no hubo cambios
                 code: "NO_CHANGES_DETECTED",
                 msg: "No se proporcionaron datos nuevos para actualizar.",
-                info: { imageAction: imageAction, fieldsAttempted: fieldsUpdated }
+                info: { imageAction: imageAction, fieldsAttempted: fieldsUpdated,updatableFields:updatableFields }
             });
         }
 
