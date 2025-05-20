@@ -273,6 +273,20 @@ const updateOrder = async (req, res) => {
                 msg: `Orden con ID ${id} no encontrada.`
             });
         }
+
+        // Solo permitir que el vendedor actualice sus propias órdenes
+        if (
+            req.SellerBDD &&
+            req.SellerBDD.role === 'Seller' &&
+            orderToUpdate.seller.toString() !== req.SellerBDD._id.toString()
+        ) {
+            return res.status(403).json({
+                status: "error",
+                code: "FORBIDDEN",
+                msg: "No tienes permisos para actualizar esta orden. Solo puedes modificar tus propias órdenes."
+            });
+        }
+
         if (orderToUpdate.status !== "Pendiente") {
             return res.status(400).json({ // O 403 Forbidden si es por permisos
                 status: "error",
@@ -463,12 +477,25 @@ const updateStateOrder = async (req, res) => {
             });
         }
 
-        const orderExists = await Orders.findById(id).select('_id status');
+        const orderExists = await Orders.findById(id).select('_id status seller customer products discountApplied netTotal totalWithTax comment registrationDate lastUpdate');
         if (!orderExists) {
             return res.status(404).json({
                 status: "error",
                 code: "NOT_FOUND",
                 msg: `No se encontró la orden con el id ${id}.`
+            });
+        }
+
+        // Solo permitir que el vendedor actualice sus propias órdenes
+        if (
+            req.SellerBDD &&
+            req.SellerBDD.role === 'Seller' &&
+            orderExists.seller.toString() !== req.SellerBDD._id.toString()
+        ) {
+            return res.status(403).json({
+                status: "error",
+                code: "FORBIDDEN",
+                msg: "No tienes permisos para actualizar el estado de esta orden. Solo puedes modificar tus propias órdenes."
             });
         }
 
@@ -487,7 +514,6 @@ const updateStateOrder = async (req, res) => {
                 msg: "No se puede cambiar el estado de una orden 'Cancelado'."
             });
         }
-
 
         const updatedOrder = await Orders.findByIdAndUpdate(
             id,
