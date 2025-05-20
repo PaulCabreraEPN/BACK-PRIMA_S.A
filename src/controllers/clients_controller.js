@@ -167,7 +167,10 @@ const UpdateClient = async (req, res) => {
             return res.status(400).json({
                 status: "error",
                 code: "NO_UPDATABLE_FIELDS",
-                msg: "No se proporcionaron campos válidos para actualizar."
+                msg: "No se proporcionaron campos válidos para actualizar.",
+                info:{
+                    validFields: validFields,
+                }
             });
         }
 
