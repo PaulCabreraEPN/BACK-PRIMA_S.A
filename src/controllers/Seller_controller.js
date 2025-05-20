@@ -13,7 +13,7 @@ const registerSeller = async (req, res) => {
     };
     try {
         //* Paso 1 -Tomar Datos del Request
-        const { email, cedula, names, lastNames, PhoneNumber, SalesCity } = req.body; // Ser explícito con los campos
+        const { email, cedula, names, lastNames, PhoneNumber, SalesCity,role } = req.body; // Ser explícito con los campos
 
         //* Paso 2 - Validar Datos
         //? Verifica si un campo esta vacio
@@ -59,7 +59,7 @@ const registerSeller = async (req, res) => {
         }
 
         //* Paso 3 - Interactuar con BDD
-        const newSeller = new Sellers({ email, cedula, names, lastNames, PhoneNumber, SalesCity }); // Usar campos validados
+        const newSeller = new Sellers({ email, cedula, names, lastNames, PhoneNumber, SalesCity,role }); // Usar campos validados
         newSeller.password = await newSeller.encryptPassword(passwordGen);
         newSeller.username = usernameGen;
 
