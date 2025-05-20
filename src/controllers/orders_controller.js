@@ -660,7 +660,12 @@ const deleteOrder = async (req, res) => {
 //* Ver todas las órdenes (con detalles relacionados)
 const SeeAllOrders = async (req, res) => {
     try {
-        const orders = await Orders.find()
+        let filter = {};
+        // Si es vendedor, solo puede ver sus propias órdenes
+        if (req.SellerBDD && req.SellerBDD.role === 'Seller') {
+            filter.seller = req.SellerBDD._id;
+        }
+        const orders = await Orders.find(filter)
             .sort({ registrationDate: -1 })
             .lean(); // Usar lean para mejor rendimiento
 
@@ -739,6 +744,19 @@ const SeeOrderById = async (req, res) => {
                 status: "error",
                 code: "NOT_FOUND",
                 msg: `Orden con ID ${id} no encontrada.`
+            });
+        }
+
+        // Solo permitir ver la orden si es admin o el vendedor dueño
+        if (
+            req.SellerBDD &&
+            req.SellerBDD.role === 'Seller' &&
+            order.seller.toString() !== req.SellerBDD._id.toString()
+        ) {
+            return res.status(403).json({
+                status: "error",
+                code: "FORBIDDEN",
+                msg: "No tienes ordenes para ver. Solo puedes ver tus propias órdenes."
             });
         }
 
