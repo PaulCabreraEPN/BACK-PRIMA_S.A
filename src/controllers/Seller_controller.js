@@ -540,10 +540,22 @@ const searchSellerByNumberId = async (req, res) => {
                 msg: "El parámetro 'cedula' es obligatorio."
             });
         }
-        // Aquí se podría añadir validación de formato de cédula si es posible
+        // El validador de express-validator ya se encarga de la validez del formato de la cédula.
 
         //* Paso 3 - Interactuar con BDD
-        const seller = await Sellers.findOne({ cedula })
+        // Convertir la cédula (string) a Número para la consulta, ya que el modelo la define como Number.
+        const numericCedula = Number(cedula);
+
+        // Verificar si la conversión fue exitosa (no es NaN)
+        if (isNaN(numericCedula)) {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_FORMAT",
+                msg: `La cédula '${cedula}' no es un número válido para la búsqueda.`
+            });
+        }
+
+        const seller = await Sellers.findOne({ cedula: numericCedula })
             .select("_id names lastNames cedula email username PhoneNumber SalesCity role status") // Seleccionar campos
             .lean(); // Usar lean
 
