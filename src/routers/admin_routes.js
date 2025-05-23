@@ -53,6 +53,8 @@ router.get('/sellers-numberid/:cedula', verificarAutenticacion,authorizeRole(['a
 router.get('/sellers/:id', verificarAutenticacion,authorizeRole(['admin']),validateFindSellerById,validateRequest, searchSellerById)
 // Rutas para actualizar 
 router.patch("/updateSeller/:id", verificarAutenticacion,authorizeRole(['admin']),validateUpdateSeller,validateRequest, updateSellerController)
+// Ruta para que el vendedor actualice su propio perfil
+router.patch("/updateMyProfile/:id", verificarAutenticacion,authorizeRole(['seller']),validateUpdateSeller,validateRequest, updateSellerController)
 // Ruta para Eliminar 
 router.delete("/deleteSellerinfo/:id", verificarAutenticacion,authorizeRole(['admin']),validateFindSellerById, validateRequest, DeleteSellerController)
 
