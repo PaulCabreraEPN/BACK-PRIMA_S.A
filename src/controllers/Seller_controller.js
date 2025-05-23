@@ -223,10 +223,8 @@ const loginSeller = async (req, res) => {
                 code: "INVALID_CREDENTIALS",
                 msg: "Contraseña incorrecta."
             });
-        }
-
-        // Login exitoso
-        const tokenJWT = generarJWT(SellerBDD._id, "Seller"); // Asegúrate que el rol sea correcto
+        }        // Login exitoso
+        const tokenJWT = generarJWT(SellerBDD._id, "seller"); // Usar "seller" en minúsculas
 
         // Datos a devolver
         const sellerInfo = {
@@ -591,6 +589,18 @@ const updateSellerController = async (req, res) => {
         //* Paso 1 - Tomar Datos del Request
         const { id } = req.params; // ID del vendedor a actualizar
         const updates = req.body; // Datos a actualizar
+        
+        // Verificar que req.user exista (debería ser establecido por el middleware de autenticación)
+        if (!req.user) {
+            return res.status(401).json({
+                status: "error",
+                code: "UNAUTHORIZED",
+                msg: "No se ha autenticado correctamente para realizar esta acción."
+            });
+        }
+        
+        const userRole = req.user.role; // Rol del usuario que hace la solicitud
+        const userId = req.user._id; // ID del usuario que hace la solicitud
 
         //* Paso 2 - Validar Datos
         // Validar si el id es un ObjectId válido
@@ -601,10 +611,24 @@ const updateSellerController = async (req, res) => {
                 msg: `El ID '${id}' no tiene un formato válido.`
             });
         }
-
-        // Obtener los atributos válidos del modelo que se pueden actualizar
+        
+        // Verificar permisos: solo admin puede modificar cualquier vendedor, 
+        // mientras que un vendedor solo puede modificar su propia información
+        if (userRole !== 'admin' && id !== userId.toString()) {
+            return res.status(403).json({
+                status: "error",
+                code: "FORBIDDEN",
+                msg: "No tienes permiso para actualizar este perfil."
+            });
+        }// Obtener los atributos válidos del modelo que se pueden actualizar
         // Excluir campos sensibles o que no deberían cambiarse masivamente aquí (como password, username, token, confirmEmail)
-        const validFields = ['email', 'PhoneNumber', 'SalesCity', 'names', 'lastNames', 'cedula', 'role', 'status'];
+        let validFields = ['email', 'PhoneNumber', 'SalesCity', 'names', 'lastNames', 'cedula'];
+        
+        // Añadir campos solo permitidos para administradores
+        if (userRole === 'admin') {
+            validFields = [...validFields, 'role', 'status'];
+        }
+        
         const filteredUpdates = {};
         const fieldsReceived = Object.keys(updates);
 
