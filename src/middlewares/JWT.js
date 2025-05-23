@@ -20,11 +20,13 @@ const verificarAutenticacion = async (req, res, next) => {
     try {
         const token = authorization.split(' ')[1]
         const decoded = jwt.verify(token, process.env.JWT_SECRET)
-        const { id, rol } = decoded
-
-        // Verificar rol y asignar usuario
+        const { id, rol } = decoded        // Verificar rol y asignar usuario
         if (rol === "admin") {
             req.veterinarioBDD = await admins.findById(id).lean().select("-password")
+            // También establecer req.user para consistencia en controladores
+            req.user = req.veterinarioBDD;
+            req.user.role = "admin"; // Asegurarse que tenga la propiedad role
+            
             if (!req.veterinarioBDD) {
                 // 3. Usuario no encontrado (aunque el token sea válido)
                 return res.status(404).json({
@@ -34,8 +36,12 @@ const verificarAutenticacion = async (req, res, next) => {
                 });
             }
             next()
-        } else if (rol === "Seller") {
+        } else if (rol === "seller" || rol === "Seller") { // Aceptar ambos formatos
             req.SellerBDD = await Seller.findById(id).lean().select("-password")
+            // También establecer req.user para consistencia en controladores
+            req.user = req.SellerBDD;
+            req.user.role = "seller"; // Asegurarse que tenga la propiedad role en minúsculas
+            
             if (!req.SellerBDD) {
                 // 3. Usuario no encontrado
                 return res.status(404).json({
@@ -137,9 +143,10 @@ const verificarEstadoToken = async (req, res) => {
 }
 
 const authorizeRole = (rolesPermitidos) => (req, res, next) => {
-    // Detecta el rol según el usuario cargado por verificarAutenticacion
-    const userRole = req.veterinarioBDD?.role || req.SellerBDD?.role;
-    if (!rolesPermitidos.includes(userRole)) {
+    // Usar req.user que hemos establecido en verificarAutenticacion
+    const userRole = req.user?.role;
+    
+    if (!userRole || !rolesPermitidos.includes(userRole)) {
         return res.status(403).json({
             status: "error",
             code: "FORBIDDEN",
