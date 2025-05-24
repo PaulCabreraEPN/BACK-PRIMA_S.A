@@ -9,8 +9,8 @@ import {imageRequired} from '../middlewares/errorhandler.js'
 
 const router = Router()
 router.post('/products/register', verificarAutenticacion,authorizeRole(['admin']),upload.single('image'),imageRequired,createProductValidator,validateRequest,processImage, CreateProduct)
-router.get('/products', verificarAutenticacion,authorizeRole(['admin','Seller']), getAllProducts)
-router.get('/products/:id', verificarAutenticacion,authorizeRole(['admin','Seller']),getProductValidator,validateRequest, getProductsById)
+router.get('/products', verificarAutenticacion,authorizeRole(['admin','seller']), getAllProducts)
+router.get('/products/:id', verificarAutenticacion,authorizeRole(['admin','seller']),getProductValidator,validateRequest, getProductsById)
 router.patch('/products/update/:id', verificarAutenticacion,authorizeRole(['admin']),upload.single('image'),updateProductValidator,validateRequest,processImage, updatedProduct)
 router.delete('/products/delete/:id', verificarAutenticacion,authorizeRole(['admin']),deleteProductValidator,validateRequest, deleteProduct)
 

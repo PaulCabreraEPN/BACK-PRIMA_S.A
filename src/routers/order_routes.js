@@ -20,11 +20,11 @@ import { validateRequest } from '../middlewares/validator_middleware.js';
 
 const router = Router()
 
-router.post('/orders/create', verificarAutenticacion,authorizeRole(['Seller']),validateCreateOrder, validateRequest, createOrder)
-router.patch('/orders/update/state/:id', verificarAutenticacion,authorizeRole(['admin','Seller']),validateUpdateOrderStatus, validateRequest, updateStateOrder)
-router.patch('/orders/update/:id', verificarAutenticacion,authorizeRole(['Seller']),validateUpdateOrder, validateRequest, updateOrder)
-router.get("/orders",verificarAutenticacion,authorizeRole(['Seller','admin']),validateGetAllOrders,validateRequest,SeeAllOrders)
-router.get("/orders/:id",verificarAutenticacion,authorizeRole(['Seller','admin']),validateGetOrderById, validateRequest,SeeOrderById)
+router.post('/orders/create', verificarAutenticacion,authorizeRole(['seller']),validateCreateOrder, validateRequest, createOrder)
+router.patch('/orders/update/state/:id', verificarAutenticacion,authorizeRole(['admin','seller']),validateUpdateOrderStatus, validateRequest, updateStateOrder)
+router.patch('/orders/update/:id', verificarAutenticacion,authorizeRole(['seller']),validateUpdateOrder, validateRequest, updateOrder)
+router.get("/orders",verificarAutenticacion,authorizeRole(['seller','admin']),validateGetAllOrders,validateRequest,SeeAllOrders)
+router.get("/orders/:id",verificarAutenticacion,authorizeRole(['seller','admin']),validateGetOrderById, validateRequest,SeeOrderById)
 router.delete("/orders/delete/:id",verificarAutenticacion,authorizeRole(['admin']),validateDeleteOrder,validateRequest,deleteOrder)
 
 
