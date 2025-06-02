@@ -39,8 +39,8 @@ describe('[Clients Registration / Routes]',() => {
             .post('/clients/register')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send( {
-                "Name": "Electrodomésticos Modernos S.A.",
-                "ComercialName": "ElectroModerna",
+                "Name": "ElectroModerna",
+                "ComercialName": "Electrodomésticos Modernos S.A.",
                 "Ruc": "0512889619001",
                 "Address": "Av. Amazonas N35-25 y Juan Pablo Sanz",
                 "telephone": "0987654321",
