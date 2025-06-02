@@ -688,7 +688,7 @@ const SeeAllOrders = async (req, res) => {
     try {
         let filter = {};
         // Si es vendedor, solo puede ver sus propias órdenes
-        if (req.SellerBDD && req.SellerBDD.role === 'Seller') {
+        if (req.SellerBDD && req.SellerBDD.role === 'seller') {
             filter.seller = req.SellerBDD._id;
         }
         const orders = await Orders.find(filter)
@@ -776,7 +776,7 @@ const SeeOrderById = async (req, res) => {
         // Solo permitir ver la orden si es admin o el vendedor dueño
         if (
             req.SellerBDD &&
-            req.SellerBDD.role === 'Seller' &&
+            req.SellerBDD.role === 'seller' &&
             order.seller.toString() !== req.SellerBDD._id.toString()
         ) {
             return res.status(403).json({
