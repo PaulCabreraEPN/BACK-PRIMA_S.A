@@ -11,7 +11,7 @@ const ClientSchema = new Schema({
         trim:true
     },
     Ruc:{
-        type:Number,
+        type:String,
         required:true,
         trim:true,
         unique:true
@@ -22,7 +22,7 @@ const ClientSchema = new Schema({
         trim:true
     },
     telephone:{
-        type:Number,
+        type:String,
         required:true,
     },
     email:{

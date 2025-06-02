@@ -88,10 +88,10 @@ const getAllClients = async (req, res) => {
 const getClientsById = async (req, res) => {
     try {
         //* Paso 1 - Tomar Datos del Request
-        const { ruc } = req.params;
+        const { ruc: rucParam } = req.params;
 
         //* Paso 2 - Validar Datos (Básica, idealmente con express-validator)
-        if (!ruc) { // Podría validarse formato de RUC aquí también
+        if (!rucParam) { // Podría validarse formato de RUC aquí también
             return res.status(400).json({
                 status: "error",
                 code: "MISSING_FIELD", // O INVALID_FORMAT si la validación es más específica
@@ -99,13 +99,16 @@ const getClientsById = async (req, res) => {
             });
         }
 
+        // Limpiar el RUC de posibles espacios al inicio o al final
+        const rucToSearch = rucParam.trim();
+
         //* Paso 3 - Interactuar con BDD
-        const client = await Clients.findOne({ Ruc: ruc }).select("Name ComercialName Ruc Address telephone email state"); // Seleccionar campos
+        const client = await Clients.findOne({ Ruc: rucToSearch }).select("Name ComercialName Ruc Address telephone email state"); // Seleccionar campos
         if (!client) {
             return res.status(404).json({
                 status: "error",
                 code: "NOT_FOUND",
-                msg: `No se encontró cliente con RUC ${ruc}.`
+                msg: `No se encontró cliente con RUC ${rucToSearch}.`
             });
         }
 
