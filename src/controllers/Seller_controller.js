@@ -1,6 +1,6 @@
 import { passwordGenerator } from '../helpers/passwordGenerator.js'
 import Sellers from '../models/sellers.js'
-import { SendMailCredentials, sendMailToVerifyEmail } from '../config/nodemailer.js';
+import { SendMailCredentials, sendMailToRecoveryPasswordSeller} from '../config/nodemailer.js';
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
 import { generarJWT } from '../middlewares/JWT.js'
@@ -297,8 +297,10 @@ const passwordRecovery = async (req, res) => {
         // Guardar el token PRIMERO
         await SellerBDD.save();
 
+        const username = SellerBDD.names;
+
         // Enviar correo DESPUÉS de guardar y guardar el resultado
-        const emailResult = await sendMailToVerifyEmail(email, token); // Asegúrate que esta función envíe el correo correcto para recuperación
+        const emailResult = await sendMailToRecoveryPasswordSeller(username,token,email); // Asegúrate que esta función envíe el correo correcto para recuperación
         emailStatus.sent = emailResult.success;
         emailStatus.message = emailResult.message;
 

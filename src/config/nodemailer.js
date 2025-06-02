@@ -106,6 +106,42 @@ const sendMailToRecoveryPassword = async(username, password)=>{
     }
 }
 
+const sendMailToRecoveryPasswordSeller = async (username, token,email) => {
+    try {
+        let info = await transporter.sendMail({
+            from: process.env.USER_MAILTRAP,
+            to: email, 
+            subject: "Recupera tu contraseña en PRIMA S.A.",
+            html: `
+            <body style="font-family: Arial, sans-serif; line-height: 1.6; margin: 0; padding: 0; background-color: #f4f4f9;">
+                <div style="max-width: 600px; margin: 20px auto; background: #ffffff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
+                    <div style="text-align: center; margin-bottom: 20px;">
+                        <img src="https://res.cloudinary.com/dnp9gpo8w/image/upload/v1734182789/myEmailLogo_m4nkqh.jpg" width="80px" height="80px" alt="Logo PRIMA" style="border-radius: 50%;">
+                        <h2 style="color: #004ba0;">Recuperación de Contraseña</h2>
+                    </div>
+                    <p style="color: #333;">Hola <strong>${username}</strong>,</p>
+                    <p style="color: #333;">Hemos recibido una solicitud para restablecer tu contraseña. Utiliza el siguiente token para completar el proceso:</p>
+                    <div style="background: #f0f0f0; padding: 15px; border: 1px solid #ccc; border-radius: 5px; text-align: center; margin: 20px 0;">
+                        <p style="color: #333; font-size: 1.1em; margin-bottom: 10px;">Tu token de recuperación es:</p>
+                        <p style="color: #004ba0; font-size: 1.3em; font-family: 'Courier New', Courier, monospace; background: #e9ecef; padding: 10px; border-radius: 3px; display: inline-block; letter-spacing: 2px;">
+                            <strong>${token}</strong>
+                        </p>
+                    </div>
+                    <p style="color: #333;">Copia y pega este token en el campo correspondiente en la aplicación o página web.</p>
+                    <p style="color: #333;">Si no solicitaste este cambio, por favor ignora este correo o contacta a nuestro equipo de soporte.</p>
+                    <p style="text-align: center; margin-top: 20px; color: #333;">¡Gracias por confiar en nosotros!</p>
+                    <p style="text-align: center; margin-top: 20px; color: #aaa;">© 2024 PRIMA S.A. Todos los derechos reservados.</p>
+                </div>
+            </body>
+            `
+        });
+        return { success: true, message: `Email de recuperación con token enviado para ${username}`, info: info.messageId };
+    } catch (error) {
+        console.error(`Error enviando email de recuperación con token para ${username}:`, error);
+        return { success: false, message: `Error al enviar email de recuperación con token para ${username}`, error: error };
+    }
+}
+
 // Modificada para usar try/catch y retornar estado/error
 const sendMailToVerifyEmail = async(email, token) => {
     try {
@@ -152,5 +188,6 @@ const sendMailToVerifyEmail = async(email, token) => {
 export {
     SendMailCredentials,
     sendMailToRecoveryPassword,
+    sendMailToRecoveryPasswordSeller,
     sendMailToVerifyEmail
 }
