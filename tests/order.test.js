@@ -48,7 +48,7 @@ describe('[Orders Registration / Routes]', () => {
             .post('/orders/create')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
-                "customer": "1792837465001", 
+                "customer": "1792829654001", 
                 "products": [
                     {
                         "productId": "55005",
@@ -247,7 +247,7 @@ describe('[Orders Get All / Routes]', () => {
         const expected = 200
         // Act
         const response = await request
-            .get('/orders/6808583b4d09064b2cc9f291')
+            .get('/orders/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
         // Assert
         expect(response.status).toEqual(expected)
@@ -282,7 +282,7 @@ describe('[Orders Update / Routes]', () => {
         const expected = 200
         // Act
         const response = await request
-            .patch('/orders/update/6808583b4d09064b2cc9f291')
+            .patch('/orders/update/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
                 "products": [
@@ -424,7 +424,7 @@ describe('[Orders Update / Routes]', () => {
         const expected = 200
         // Act
         const response = await request
-            .patch('/orders/update/state/6808583b4d09064b2cc9f291')
+            .patch('/orders/update/state/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send({
                 "status": "En proceso"
@@ -438,7 +438,7 @@ describe('[Orders Update / Routes]', () => {
         const expected = 400
         // Act
         const response = await request
-            .patch('/orders/update/6808583b4d09064b2cc9f291')
+            .patch('/orders/update/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
                 "products": [
@@ -459,11 +459,12 @@ describe('[Orders Update / Routes]', () => {
             })
 
         await request
-            .patch('/orders/update/state/6808583b4d09064b2cc9f291')
+            .patch('/orders/update/state/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
             .send({
                 "status": "Pendiente"
             })
+
             
         // Assert
         expect(response.status).toEqual(expected)
@@ -473,7 +474,7 @@ describe('[Orders Update / Routes]', () => {
         const expected = 400
         // Act
         const response = await request
-            .patch('/orders/update/6808583b4d09064b2cc9f291')
+            .patch('/orders/update/683cfaaa6c0c4f69b2a255aa')
             .set('Authorization', `Bearer ${SELLER_TOKEN}`)
             .send({
                 "products": [
@@ -538,7 +539,7 @@ describe('[Orders Delete / Routes]', () => {
         const expected = 400
         // Act
         const response = await request
-            .delete('/orders/delete/680921e29946e7abad0edd6d')
+            .delete('/orders/delete/683cfab66c0c4f69b2a255b0')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
 
         // Assert
