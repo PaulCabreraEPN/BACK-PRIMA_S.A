@@ -2,7 +2,7 @@ import {Schema,model} from 'mongoose'
 
 const orderSchema = new Schema({
     customer: {
-        type: Number,
+        type: String,
         ref: 'clients',
         required: true
     },
