@@ -301,7 +301,7 @@ describe('[Seller Search / Routes]',() => {
         
         // Act
         const response = await request
-            .get('/sellers/6808382f9ab87e70de1573b6')
+            .get('/sellers/683cf9516c0c4f69b2a25582')
             .set('Authorization', `Bearer ${ADMIN_TOKEN}`)
         // Assert
         expect(response.status).toEqual(expected)
