@@ -709,7 +709,7 @@ const SeeAllOrders = async (req, res) => {
         const productIds = [...new Set(orders.flatMap(order => order.products.map(product => parseInt(product.productId))))];
 
         const [clients, sellers, products] = await Promise.all([
-            Clients.find({ Ruc: { $in: customerRUCs } }).select("Name Ruc Address telephone email credit state").lean(),
+            Clients.find({ Ruc: { $in: customerRUCs } }).select("Name Ruc Address telephone email credit state ComercialName").lean(),
             Sellers.find({ _id: { $in: sellerIds } }).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
             Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
         ]);
@@ -791,7 +791,7 @@ const SeeOrderById = async (req, res) => {
         const productIds = order.products.map(product => parseInt(product.productId));
 
         const [clientDetails, sellerDetails, productsDetails] = await Promise.all([
-            Clients.findOne({ Ruc: customerRuc }).select("Name Ruc Address telephone email credit state").lean(),
+            Clients.findOne({ Ruc: customerRuc }).select("Name Ruc Address telephone email credit state ComercialName").lean(),
             Sellers.findById(sellerId).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
             Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
         ]);
