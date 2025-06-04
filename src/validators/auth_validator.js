@@ -2,11 +2,12 @@ import { body, param } from 'express-validator';
 
 // Validaciones para el login de administrador
 const regex= /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.#])[A-Za-z\d@$!%*?&.#]{8,}$/
+const regexUsername = /^[A-Za-z0-9@#$%&*()_\-]+$/;
 export const validateAdminLogin = [
     body('username')
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
-        .matches(regex)
+        .matches(regexUsername)
         .withMessage('Formato de usuario inválido'),
     body('password')
         .trim()
