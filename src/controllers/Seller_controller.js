@@ -234,7 +234,8 @@ const loginSeller = async (req, res) => {
             email: SellerBDD.email,
             names: SellerBDD.names,
             lastNames: SellerBDD.lastNames,
-            SalesCity: SellerBDD.SalesCity
+            SalesCity: SellerBDD.SalesCity,
+            PhoneNumber: SellerBDD.PhoneNumber,
         };
 
         return res.status(200).json({
