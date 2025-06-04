@@ -1,7 +1,7 @@
 import { body, param } from 'express-validator';
 
 // Validaciones para el login de administrador
-const regex= /^[A-Za-z0-9@#$%&*()_\-]+$/
+const regex= /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&.#])[A-Za-z\d@$!%*?&.#]{8,}$/
 export const validateAdminLogin = [
     body('username')
         .trim()
@@ -67,8 +67,8 @@ export const validateNewPassword = [
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
         .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
-        .matches(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[a-zA-Z\d]{8,}$/)
-        .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula y un número'),
+        .matches(regex)
+        .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
     
     body('confirmpassword')
         .notEmpty().withMessage('La confirmación de contraseña es requerida')
