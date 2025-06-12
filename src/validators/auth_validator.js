@@ -22,7 +22,7 @@ export const validateAdminPasswordRecovery = [
     body('username')
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
-        .matches(regex).withMessage('El usuario solo puede contener letras')
+        .matches(regexUsername).withMessage('El usuario solo puede contener letras')
 ];
 
 // Validaciones para el login de vendedor
