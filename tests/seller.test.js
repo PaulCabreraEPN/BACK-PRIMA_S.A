@@ -33,7 +33,7 @@ describe('[Seller Public Endpoints]', () => {
                 .post('/login')
                 .send({
                     username: process.env.SELLER_USER,
-                    password: 'wrong_password'
+                    password: 'wRong$5321'
                 })
             expect(response.status).toBe(401)
         })
