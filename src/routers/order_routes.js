@@ -25,7 +25,7 @@ router.patch('/orders/update/state/:id', verificarAutenticacion,authorizeRole(['
 router.patch('/orders/update/:id', verificarAutenticacion,authorizeRole(['seller']),validateUpdateOrder, validateRequest, updateOrder)
 router.get("/orders",verificarAutenticacion,authorizeRole(['seller','admin']),validateGetAllOrders,validateRequest,SeeAllOrders)
 router.get("/orders/:id",verificarAutenticacion,authorizeRole(['seller','admin']),validateGetOrderById, validateRequest,SeeOrderById)
-router.delete("/orders/delete/:id",verificarAutenticacion,authorizeRole(['admin']),validateDeleteOrder,validateRequest,deleteOrder)
+router.delete("/orders/delete/:id",verificarAutenticacion,authorizeRole(['admin','seller']),validateDeleteOrder,validateRequest,deleteOrder)
 
 
 
