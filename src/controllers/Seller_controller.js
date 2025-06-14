@@ -556,7 +556,7 @@ const searchSellerByNumberId = async (req, res) => {
             });
         }
 
-        const seller = await Sellers.findOne({ cedula: numericCedula })
+        const seller = await Sellers.findOne({ cedula: cedula })
             .select("_id names lastNames cedula email username PhoneNumber SalesCity role status") // Seleccionar campos
             .lean(); // Usar lean
 
