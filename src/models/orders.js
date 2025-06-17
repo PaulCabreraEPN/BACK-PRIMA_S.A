@@ -38,8 +38,8 @@ const orderSchema = new Schema({
     credit: {
         type: String,
         required: true,
-        enum: ['Contado 15 días', 'Crédito 30 días'],
-        default: 'Contado 15 días'
+        enum: ['Contado 1 día', 'Crédito 30 días','Crédito 1 día'],
+        default: 'Contado 1 día'
     },
     status: {
         type: String,

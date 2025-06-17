@@ -32,8 +32,8 @@ const validateCreateOrder = [
 
     body('credit')
         .notEmpty().withMessage('El tipo de crédito es requerido')
-        .isIn(['Contado 15 días', 'Crédito 30 días'])
-        .withMessage('El tipo de crédito debe ser "Contado 15 días" o "Crédito 30 días"'),
+        .isIn(['Contado 1 día', 'Crédito 30 días','Crédito 1 día'])
+        .withMessage('El tipo de crédito debe ser "Contado 1 día", "Crédito 1 día" o "Crédito 30 días"'),
 
     body('discountApplied')
         .isFloat({ min: 0, max: 100 }).withMessage('Descuento debe ser un número entre 0 y 100'),
@@ -85,8 +85,8 @@ const validateUpdateOrder = [
 
     body('credit')
         .optional()
-        .isIn(['Contado 15 días', 'Crédito 30 días'])
-        .withMessage('El tipo de crédito debe ser "Contado 15 días" o "Crédito 30 días"'),
+        .isIn(['Contado 1 día', 'Crédito 30 días','Crédito 1 día'])
+        .withMessage('El tipo de crédito debe ser "Contado 1 día", "Crédito 1 día" o "Crédito 30 días"'),
 
     body('discountApplied')
         .optional()
@@ -144,33 +144,6 @@ const validateGetOrderById = [
 
 
 
-// Validar parámetros de consulta para listar órdenes
-const validateGetAllOrders = [
-    query('status')
-        .optional()
-        .isIn(['Pendiente', 'En proceso', 'Enviado', 'Cancelado'])
-        .withMessage('Estado inválido'),
-
-    query('startDate')
-        .optional()
-        .isISO8601()
-        .withMessage('Fecha inicial inválida'),
-
-    query('endDate')
-        .optional()
-        .isISO8601()
-        .withMessage('Fecha final inválida'),
-
-    query('page')
-        .optional()
-        .isInt({ min: 1 })
-        .withMessage('Página inválida'),
-
-    query('limit')
-        .optional()
-        .isInt({ min: 1, max: 100 })
-        .withMessage('Límite inválido')
-];
 
 // Validar eliminación de orden
 const validateDeleteOrder = [
@@ -186,7 +159,6 @@ export {
     validateUpdateOrder,
     validateUpdateOrderStatus,
     validateGetOrderById,
-    validateGetAllOrders,
     validateDeleteOrder,
 
 }
