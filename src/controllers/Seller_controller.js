@@ -281,9 +281,6 @@ const passwordRecovery = async (req, res) => {
 
         const SellerBDD = await Sellers.findOne({ email });
         if (!SellerBDD) {
-            // No revelar si el email existe o no por seguridad
-            // Simular éxito aunque el email no exista
-            console.log(`Intento de recuperación para email no registrado: ${email}`);
             return res.status(200).json({
                 status: "success", // Simular éxito
                 code: "RECOVERY_EMAIL_SENT_IF_EXISTS", // Código ambiguo a propósito
