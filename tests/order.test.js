@@ -62,7 +62,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "credit": "Contado 15 días"
+                "credit": "Contado 1 día"
             })
         ORDER_ID = response.body.data._id
         // Assert
@@ -186,7 +186,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "credit": "Contado 15 días"
+                "credit": "Contado 1 día"
             })
         // Assert
         expect(response.status).toEqual(expected)
@@ -213,7 +213,7 @@ describe('[Orders Registration / Routes]', () => {
                 "discountApplied": 10.5,
                 "netTotal": 7.79,
                 "totalWithTax": 10.67,
-                "credit": "Contado 15 días"
+                "credit": "Contado 1 día"
             })
 
         // Assert
@@ -299,7 +299,7 @@ describe('[Orders Update / Routes]', () => {
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
                 "comment": "Nueva Actualizacion",
-                "credit": "Contado 15 días"
+                "credit": "Contado 1 día"
             })
 
         // Assert
@@ -413,7 +413,7 @@ describe('[Orders Update / Routes]', () => {
                 "netTotal": 7.8,
                 "totalWithTax": 8.97,
                 "comment": "Nueva Actualizacion",
-                "credit": "Contado 15 días"
+                "credit": "Contado 1 día"
             })
 
         // Assert
