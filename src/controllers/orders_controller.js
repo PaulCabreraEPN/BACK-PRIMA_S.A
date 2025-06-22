@@ -711,7 +711,7 @@ const SeeAllOrders = async (req, res) => {
         const [clients, sellers, products] = await Promise.all([
             Clients.find({ Ruc: { $in: customerRUCs } }).select("Name Ruc Address telephone email credit state ComercialName").lean(),
             Sellers.find({ _id: { $in: sellerIds } }).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
-            Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
+            Products.find({ id: { $in: productIds } }).select("id product_name reference description price imgUrl").lean()
         ]);
 
         const clientMap = clients.reduce((map, client) => { map[client.Ruc] = client; return map; }, {});
@@ -793,7 +793,7 @@ const SeeOrderById = async (req, res) => {
         const [clientDetails, sellerDetails, productsDetails] = await Promise.all([
             Clients.findOne({ Ruc: customerRuc }).select("Name Ruc Address telephone email credit state ComercialName").lean(),
             Sellers.findById(sellerId).select("names lastNames numberID email SalesCity PhoneNumber").lean(),
-            Products.find({ id: { $in: productIds } }).select("id product_name reference description price").lean()
+            Products.find({ id: { $in: productIds } }).select("id product_name reference description price imgUrl").lean()
         ]);
 
         const productMap = productsDetails ? productsDetails.reduce((map, product) => { map[product.id] = product; return map; }, {}) : {};
