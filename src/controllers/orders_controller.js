@@ -87,61 +87,19 @@ const createOrder = async (req, res) => {
             if (productInDB.stock < requestedQuantity) {
                 return res.status(400).json({
                     status: "error",
-                    code: "INSUFFICIENT_STOCK", // Código específico
+                    code: "INSUFFICIENT_STOCK",
                     msg: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, Cantidad solicitada: ${requestedQuantity}`
                 });
             }
 
-            const operation = {
-                updateOne: {
-                    filter: { id: productId, stock: { $gte: requestedQuantity } },
-                    update: { $inc: { stock: -requestedQuantity } }
-                }
+            // No reducimos el stock aquí, solo se verificó que haya suficiente
+            stockUpdateDetails[productId] = {
+                currentStock: productInDB.stock,
+                requestedQuantity: requestedQuantity
             };
-            bulkWriteOps.push(operation);
-            updateOperations.push({ productId, quantity: requestedQuantity });
         }
 
-        // 3. Actualizar Stock
-        if (bulkWriteOps.length > 0) {
-            const bulkResult = await Products.bulkWrite(bulkWriteOps);
-            stockUpdateDetails.attempted = bulkWriteOps.length;
-            stockUpdateDetails.modified = bulkResult.modifiedCount;
-
-            if (bulkResult.modifiedCount !== bulkWriteOps.length) {
-                stockUpdateDetails.status = "Conflicto";
-                stockUpdateDetails.message = `Conflicto de stock: Se intentaron actualizar ${bulkWriteOps.length} productos, pero solo ${bulkResult.modifiedCount} se modificaron. Inténtalo de nuevo.`;
-                const revertPartialOps = updateOperations.slice(0, bulkResult.modifiedCount).map(op => ({
-                    updateOne: { filter: { id: op.productId }, update: { $inc: { stock: op.quantity } } }
-                }));
-                if (revertPartialOps.length > 0) {
-                    try {
-                        await Products.bulkWrite(revertPartialOps);
-                        stockUpdateDetails.reversion = "Intento de reversión parcial realizado.";
-                    } catch (revertError) {
-                        stockUpdateDetails.reversion = `Error crítico al intentar reversión parcial: ${revertError.message}`;
-                        console.error("Error crítico al intentar reversión parcial en createOrder:", revertError);
-                    }
-                }
-                return res.status(409).json({ // 409 Conflict
-                    status: "error",
-                    code: "STOCK_CONFLICT",
-                    msg: stockUpdateDetails.message,
-                    info: stockUpdateDetails
-                });
-            }
-            stockUpdated = true;
-            stockUpdateDetails.status = "Éxito";
-            stockUpdateDetails.message = `Stock actualizado para ${bulkResult.modifiedCount} productos.`;
-        } else {
-            return res.status(400).json({
-                status: "error",
-                code: "INVALID_OPERATION",
-                msg: "No se prepararon operaciones de stock válidas (posiblemente productos no encontrados o cantidades inválidas)."
-            });
-        }
-
-        // 4. Crear la Orden
+        // Crear la orden sin modificar el stock
         const newOrder = new Orders({
             customer,
             products: Object.entries(productQuantities).map(([pId, qty]) => ({ productId: pId, quantity: qty })),
@@ -214,10 +172,6 @@ const createOrder = async (req, res) => {
 
 //* Actualizar Orden
 const updateOrder = async (req, res) => {
-    let stockAdjusted = false;
-    let stockAdjustmentOps = [];
-    let stockUpdateDetails = {};
-
     try {
         const { id } = req.params;
         const { products: newProductsData, discountApplied, netTotal, totalWithTax, comment, credit } = req.body;
@@ -244,6 +198,7 @@ const updateOrder = async (req, res) => {
                 msg: "Los valores numéricos (discountApplied, netTotal, totalWithTax) no pueden ser negativos."
             });
         }
+
         const productQuantities = {};
         for (const product of newProductsData) {
             if (!product.productId || product.quantity == null || product.quantity <= 0) {
@@ -277,7 +232,7 @@ const updateOrder = async (req, res) => {
         // Solo permitir que el vendedor actualice sus propias órdenes
         if (
             req.SellerBDD &&
-            req.SellerBDD.role === 'Seller' &&
+            req.SellerBDD.role === 'seller' &&
             orderToUpdate.seller.toString() !== req.SellerBDD._id.toString()
         ) {
             return res.status(403).json({
@@ -287,89 +242,32 @@ const updateOrder = async (req, res) => {
             });
         }
 
+        // Solo permitir actualizar órdenes en estado Pendiente
         if (orderToUpdate.status !== "Pendiente") {
-            return res.status(400).json({ // O 403 Forbidden si es por permisos
+            return res.status(400).json({
                 status: "error",
                 code: "INVALID_OPERATION",
                 msg: `La orden con estado '${orderToUpdate.status}' no puede ser actualizada.`
             });
         }
 
-        // --- Lógica de Actualización de Stock ---
-        const oldQuantities = orderToUpdate.products.reduce((map, p) => { map[parseInt(p.productId)] = p.quantity; return map; }, {});
-        const allInvolvedProductIds = Array.from(new Set([...Object.keys(oldQuantities).map(Number), ...Object.keys(productQuantities).map(Number)]));
-        const productsInDB = await Products.find({ id: { $in: allInvolvedProductIds } });
+        // --- Verificar que los productos existan ---
+        const productIds = Object.keys(productQuantities).map(Number);
+        const productsInDB = await Products.find({ id: { $in: productIds } });
         const productsMap = productsInDB.reduce((acc, product) => { acc[product.id] = product; return acc; }, {});
 
-        const bulkStockAdjustOps = [];
-        stockAdjustmentOps = [];
-        for (const productId of allInvolvedProductIds) {
-            const productInDB = productsMap[productId];
-            const oldQty = oldQuantities[productId] || 0;
-            const newQty = productQuantities[productId] || 0;
-            const netChange = oldQty - newQty;
-
-            if (!productInDB && newQty > 0) {
+        // Verificar que todos los productos existan
+        for (const productId of productIds) {
+            if (!productsMap[productId]) {
                 return res.status(404).json({
                     status: "error",
                     code: "NOT_FOUND",
                     msg: `Producto con ID ${productId} no encontrado en la base de datos.`
                 });
             }
-            if (!productInDB || netChange === 0) continue;
-
-            if (netChange < 0 && productInDB.stock < Math.abs(netChange)) {
-                return res.status(400).json({
-                    status: "error",
-                    code: "INSUFFICIENT_STOCK",
-                    msg: `Stock insuficiente para el producto ${productId}. Stock actual: ${productInDB.stock}, se intentarían quitar ${Math.abs(netChange)} unidades adicionales.`
-                });
-            }
-
-            const operation = {
-                updateOne: {
-                    filter: { id: productId, stock: { $gte: (netChange < 0 ? Math.abs(netChange) : 0) } },
-                    update: { $inc: { stock: netChange } }
-                }
-            };
-            bulkStockAdjustOps.push(operation);
-            stockAdjustmentOps.push({ productId, netChange });
         }
 
-        // --- Ejecutar Actualizaciones ---
-        if (bulkStockAdjustOps.length > 0) {
-            const bulkResult = await Products.bulkWrite(bulkStockAdjustOps);
-            stockUpdateDetails.attempted = bulkStockAdjustOps.length;
-            stockUpdateDetails.modified = bulkResult.modifiedCount;
-
-            if (bulkResult.modifiedCount !== bulkStockAdjustOps.length) {
-                stockUpdateDetails.status = "Conflicto";
-                stockUpdateDetails.message = `Conflicto al ajustar stock: Se intentaron ${bulkStockAdjustOps.length} ajustes, pero solo ${bulkResult.modifiedCount} se completaron. Cambios revertidos.`;
-                const revertOps = stockAdjustmentOps.map(op => ({
-                    updateOne: { filter: { id: op.productId }, update: { $inc: { stock: -op.netChange } } }
-                }));
-                try {
-                    await Products.bulkWrite(revertOps);
-                    stockUpdateDetails.reversion = "Intento de reversión completa realizado.";
-                } catch (revertError) {
-                    stockUpdateDetails.reversion = `Error crítico al intentar reversión completa: ${revertError.message}`;
-                    console.error("¡Error Crítico! Falló la reversión del stock en conflicto de updateOrder:", revertError);
-                }
-                return res.status(409).json({ // 409 Conflict
-                    status: "error",
-                    code: "STOCK_CONFLICT",
-                    msg: stockUpdateDetails.message,
-                    info: stockUpdateDetails
-                });
-            }
-            stockAdjusted = true;
-            stockUpdateDetails.status = "Éxito";
-            stockUpdateDetails.message = `Stock ajustado para ${bulkResult.modifiedCount} productos.`;
-        } else {
-            stockUpdateDetails.status = "Sin cambios";
-            stockUpdateDetails.message = "No se requirieron ajustes de stock.";
-        }
-
+        // --- Actualizar la orden ---
         const finalProductsArray = Object.entries(productQuantities).map(([productId, quantity]) => ({ productId, quantity }));
         const filteredUpdates = {
             products: finalProductsArray,
@@ -381,7 +279,7 @@ const updateOrder = async (req, res) => {
         };
         if (comment !== undefined) { filteredUpdates.comment = comment; }
 
-        const updatedOrderDoc = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true }).lean(); // Usar lean
+        const updatedOrderDoc = await Orders.findByIdAndUpdate(id, filteredUpdates, { new: true }).lean();
 
         const updatedOrderResponse = {
             _id: updatedOrderDoc._id,
@@ -402,19 +300,17 @@ const updateOrder = async (req, res) => {
             status: "success",
             code: "ORDER_UPDATED",
             msg: "Orden actualizada con éxito.",
-            data: updatedOrderResponse,
-            info: { stockUpdateDetails }
+            data: updatedOrderResponse
         });
 
     } catch (error) {
-        console.error("Error en updateOrder:", error); // Log interno
+        console.error("Error en updateOrder:", error);
         let errorResponse = {
             status: "error",
             code: "SERVER_ERROR",
             msg: "Ha ocurrido un error inesperado al actualizar la orden. Intente de nuevo más tarde.",
             info: {
-                detail: error.message,
-                reversionStatus: "No aplica o falló"
+                detail: error.message
             }
         };
 
@@ -422,24 +318,6 @@ const updateOrder = async (req, res) => {
             errorResponse.code = "INVALID_FORMAT";
             errorResponse.msg = `ID de orden inválido: ${req.params.id}.`;
             return res.status(400).json(errorResponse);
-        }
-
-        if (stockAdjusted && stockAdjustmentOps.length > 0) {
-            errorResponse.info.reversionStatus = "Intentando revertir ajuste de stock...";
-            const revertBulkOps = stockAdjustmentOps.map(op => ({
-                updateOne: { filter: { id: op.productId }, update: { $inc: { stock: -op.netChange } } }
-            }));
-            try {
-                const revertResult = await Products.bulkWrite(revertBulkOps);
-                errorResponse.info.reversionStatus = `Reversión de ajuste de stock completada para ${revertResult.modifiedCount} productos.`;
-            } catch (revertError) {
-                errorResponse.info.reversionStatus = `¡Error Crítico! Falló la reversión del ajuste de stock: ${revertError.message}`;
-                console.error("¡Error Crítico! Falló la reversión del stock en catch de updateOrder:", revertError);
-            }
-        } else if (stockUpdateDetails.status === "Conflicto") {
-            errorResponse.info.reversionStatus = stockUpdateDetails.reversion || "Reversión manejada en conflicto de stock.";
-        } else {
-            errorResponse.info.reversionStatus = "No se requirió reversión de stock (fallo antes del ajuste o no hubo ajustes).";
         }
 
         return res.status(500).json(errorResponse);
@@ -467,6 +345,7 @@ const updateStateOrder = async (req, res) => {
                 msg: "El campo 'status' es requerido para actualizar el estado."
             });
         }
+
         // Validar que el status sea uno de los permitidos por el enum del modelo
         const allowedStatus = Orders.schema.path('status').enumValues;
         if (!allowedStatus.includes(status)) {
@@ -477,7 +356,9 @@ const updateStateOrder = async (req, res) => {
             });
         }
 
-        const orderExists = await Orders.findById(id).select('_id status seller customer products discountApplied netTotal totalWithTax comment registrationDate lastUpdate');
+        const orderExists = await Orders.findById(id)
+            .select('_id status seller customer products discountApplied netTotal totalWithTax comment registrationDate lastUpdate');
+        
         if (!orderExists) {
             return res.status(404).json({
                 status: "error",
@@ -489,7 +370,7 @@ const updateStateOrder = async (req, res) => {
         // Solo permitir que el vendedor actualice sus propias órdenes
         if (
             req.SellerBDD &&
-            req.SellerBDD.role === 'Seller' &&
+            req.SellerBDD.role === 'seller' &&
             orderExists.seller.toString() !== req.SellerBDD._id.toString()
         ) {
             return res.status(403).json({
@@ -499,7 +380,7 @@ const updateStateOrder = async (req, res) => {
             });
         }
 
-        // Lógica de negocio para cambios de estado (ejemplo)
+        // Lógica de negocio para cambios de estado
         if (orderExists.status === "Enviado" && status === "Pendiente") {
             return res.status(400).json({
                 status: "error",
@@ -513,6 +394,52 @@ const updateStateOrder = async (req, res) => {
                 code: "INVALID_OPERATION",
                 msg: "No se puede cambiar el estado de una orden 'Cancelado'."
             });
+        }
+        if (orderExists.status === "En proceso" && status === "Pendiente") {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_OPERATION",
+                msg: "No se puede revertir una orden 'En proceso' a 'Pendiente'."
+            });
+        }
+
+        // Si el nuevo estado es "En proceso", reducir el stock de los productos
+        if (status === "En proceso") {
+            const products = orderExists.products;
+            const updateOperations = [];
+
+            // Verificar stock actual y crear operaciones de actualización
+            for (const product of products) {
+                const currentProduct = await Products.findOne({ id: product.productId });
+                
+                if (!currentProduct || currentProduct.stock < product.quantity) {
+                    return res.status(400).json({
+                        status: "error",
+                        code: "INSUFFICIENT_STOCK",
+                        msg: `Stock insuficiente para el producto ${product.productId}. Stock actual: ${currentProduct ? currentProduct.stock : 0}, Cantidad requerida: ${product.quantity}`
+                    });
+                }
+
+                updateOperations.push({
+                    updateOne: {
+                        filter: { id: product.productId },
+                        update: { $inc: { stock: -product.quantity } }
+                    }
+                });
+            }
+
+            // Actualizar el stock de todos los productos
+            if (updateOperations.length > 0) {
+                try {
+                    await Products.bulkWrite(updateOperations);
+                } catch (error) {
+                    return res.status(500).json({
+                        status: "error",
+                        code: "STOCK_UPDATE_FAILED",
+                        msg: "Error al actualizar el stock de los productos."
+                    });
+                }
+            }
         }
 
         const updatedOrder = await Orders.findByIdAndUpdate(
@@ -532,23 +459,22 @@ const updateStateOrder = async (req, res) => {
             comment: updatedOrder.comment,
             registrationDate: updatedOrder.registrationDate,
             lastUpdate: updatedOrder.lastUpdate,
-            seller: updatedOrder.seller // Incluir seller si es relevante
+            seller: updatedOrder.seller
         };
 
         return res.status(200).json({
             status: "success",
             code: "ORDER_STATUS_UPDATED",
-            msg: `Estado de la orden actualizado a '${status}'.`,
+            msg: `Estado de la orden actualizado a '${status}'.${status === "En proceso" ? " Stock de productos actualizado." : ""}`,
             data: responseData
         });
 
     } catch (error) {
-        console.error("Error en updateStateOrder:", error); // Log interno
+        console.error("Error en updateStateOrder:", error);
         return res.status(500).json({
             status: "error",
             code: "SERVER_ERROR",
-            msg: "Ha ocurrido un error inesperado al actualizar el estado de la orden. Intente de nuevo más tarde.",
-            info: { detail: error.message }
+            msg: "Ha ocurrido un error inesperado al actualizar el estado de la orden. Intente de nuevo más tarde."
         });
     }
 };
