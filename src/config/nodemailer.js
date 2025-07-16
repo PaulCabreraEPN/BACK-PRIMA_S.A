@@ -4,6 +4,8 @@ import dotenv from 'dotenv'
 
 dotenv.config()
 
+const URL_APP_DOWNLOAD = "https://play.google.com/store/apps/details?id=com.myproject.primasaapp_mvil"
+
 
 let transporter = nodemailer.createTransport({
     service: 'gmail',
@@ -44,7 +46,7 @@ const SendMailCredentials = async (userMail, name, username, password, token) =>
                     <h3 style="color: #004ba0;">2. Descarga la app:</h3>
                     <p style="color: #333;">Para acceder a tu cuenta, descarga nuestra app desde el siguiente enlace:</p>
                     <p style="text-align: center;">
-                        <a href="${process.env.URL_APP_DOWNLOAD}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Descargar App</a>
+                        <a href="${URL_APP_DOWNLOAD}" target="_blank" style="background-color: #004ba0; color: white; text-decoration: none; padding: 10px 20px; border-radius: 5px; display: inline-block;">Descargar App</a>
                     </p>
                     <h3 style="color: #004ba0;">3. Recomendaciones de seguridad:</h3>
                     <ul style="color: #333;">
