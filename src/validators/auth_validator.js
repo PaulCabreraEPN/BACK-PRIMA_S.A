@@ -30,15 +30,13 @@ export const validateSellerLogin = [
     body('username')
         .trim()
         .notEmpty().withMessage('El nombre de usuario es requerido')
-        // Validación más flexible para usernames generados
-        .matches(regex)
+        .matches(regexUsername)
         .withMessage('Formato de usuario inválido'),
-    
+
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
-        // Validación más flexible para contraseñas generadas
         .matches(regex)
-        .withMessage('Formato de contraseña inválido')
+        .withMessage('Formato de contraseña inválido: la contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, un número y un carácter especial')
 ];
 
 // Validaciones para solicitud de recuperación de contraseña de vendedor
