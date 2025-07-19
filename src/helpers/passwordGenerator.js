@@ -1,7 +1,7 @@
 import crypto from 'crypto';
 
 const passwordGenerator = (length = 12) => {
-    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*()';
+    const charset = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%&*().';
     let password = '';
 
     for (let i = 0; i < length; i++) {
