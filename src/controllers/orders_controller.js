@@ -506,58 +506,77 @@ const deleteOrder = async (req, res) => {
             });
         }
 
-        // Solo permitir cancelar órdenes pendientes
-        if (orderToCancel.status !== "Pendiente") {
+        // Solo permitir cancelar órdenes que no estén en estado "Cancelado" o "Enviado"
+        if (orderToCancel.status === "Cancelado") {
             return res.status(400).json({
                 status: "error",
                 code: "INVALID_OPERATION",
-                msg: `Solo se pueden cancelar órdenes con estado 'Pendiente'. Estado actual: '${orderToCancel.status}'.`
+                msg: `La orden ya está cancelada.`
             });
         }
 
-        // --- Preparar Restauración de Stock ---
-        const bulkStockRestoreOps = [];
-        const productIdsToFind = orderToCancel.products.map(p => parseInt(p.productId));
-        let productsMap = {};
-        if (productIdsToFind.length > 0) {
-            const productsInDB = await Products.find({ id: { $in: productIdsToFind } }).lean();
-            productsMap = productsInDB.reduce((map, product) => { map[product.id] = product; return map; }, {});
+        if (orderToCancel.status === "Enviado") {
+            return res.status(400).json({
+                status: "error",
+                code: "INVALID_OPERATION",
+                msg: `No se puede cancelar una orden que ya fue enviada.`
+            });
         }
 
-        let productsNotFound = [];
-        for (const product of orderToCancel.products) {
-            const productId = parseInt(product.productId);
-            const productInDB = productsMap[productId];
-            if (productInDB) {
-                bulkStockRestoreOps.push({
-                    updateOne: { filter: { id: productId }, update: { $inc: { stock: product.quantity } } }
-                });
-            } else {
-                productsNotFound.push(productId);
-                console.warn(`Advertencia al cancelar orden ${id}: Producto con ID ${productId} no encontrado. No se restaurará su stock.`);
+        // --- Determinar si se necesita restaurar stock ---
+        // Solo se restaura stock si la orden está en "En proceso" (donde ya se debitó el stock)
+        const needsStockRestore = orderToCancel.status === "En proceso";
+        
+        if (needsStockRestore) {
+            // --- Preparar Restauración de Stock ---
+            const bulkStockRestoreOps = [];
+            const productIdsToFind = orderToCancel.products.map(p => parseInt(p.productId));
+            let productsMap = {};
+            if (productIdsToFind.length > 0) {
+                const productsInDB = await Products.find({ id: { $in: productIdsToFind } }).lean();
+                productsMap = productsInDB.reduce((map, product) => { map[product.id] = product; return map; }, {});
             }
-        }
-        stockRestoreDetails.productsNotFound = productsNotFound;
 
-        // --- Ejecutar Operaciones ---
-        if (bulkStockRestoreOps.length > 0) {
-            stockRestoreDetails.attempted = bulkStockRestoreOps.length;
-            try {
-                const bulkResult = await Products.bulkWrite(bulkStockRestoreOps);
-                stockRestoreDetails.modified = bulkResult.modifiedCount;
-                stockRestoreDetails.status = "Éxito";
-                stockRestoreDetails.message = `Intento de restauración de stock para ${stockRestoreDetails.attempted} tipos de producto completado. Modificados: ${stockRestoreDetails.modified}.`;
+            let productsNotFound = [];
+            for (const product of orderToCancel.products) {
+                const productId = parseInt(product.productId);
+                const productInDB = productsMap[productId];
+                if (productInDB) {
+                    bulkStockRestoreOps.push({
+                        updateOne: { filter: { id: productId }, update: { $inc: { stock: product.quantity } } }
+                    });
+                } else {
+                    productsNotFound.push(productId);
+                    console.warn(`Advertencia al cancelar orden ${id}: Producto con ID ${productId} no encontrado. No se restaurará su stock.`);
+                }
+            }
+            stockRestoreDetails.productsNotFound = productsNotFound;
+
+            // --- Ejecutar Operaciones de Restauración ---
+            if (bulkStockRestoreOps.length > 0) {
+                stockRestoreDetails.attempted = bulkStockRestoreOps.length;
+                try {
+                    const bulkResult = await Products.bulkWrite(bulkStockRestoreOps);
+                    stockRestoreDetails.modified = bulkResult.modifiedCount;
+                    stockRestoreDetails.status = "Éxito";
+                    stockRestoreDetails.message = `Stock restaurado para ${stockRestoreDetails.attempted} tipos de producto. Modificados: ${stockRestoreDetails.modified}.`;
+                    stockRestored = true;
+                } catch (stockError) {
+                    stockRestoreDetails.status = "Error";
+                    stockRestoreDetails.message = `Error al restaurar stock: ${stockError.message}`;
+                    stockRestored = false;
+                    // Lanzar error para detener la cancelación
+                    throw new Error(`Fallo al restaurar stock: ${stockError.message}`);
+                }
+            } else {
+                stockRestoreDetails.status = "Completado sin productos";
+                stockRestoreDetails.message = "No se encontraron productos válidos para restaurar stock.";
                 stockRestored = true;
-            } catch (stockError) {
-                stockRestoreDetails.status = "Error";
-                stockRestoreDetails.message = `Error al restaurar stock: ${stockError.message}`;
-                stockRestored = false;
-                // Lanzar error para detener la cancelación
-                throw new Error(`Fallo al restaurar stock: ${stockError.message}`);
             }
         } else {
+            // No se necesita restaurar stock para órdenes "Pendiente"
             stockRestoreDetails.status = "No requerido";
-            stockRestoreDetails.message = "No se requirió restauración de stock.";
+            stockRestoreDetails.message = `No se requiere restauración de stock para órdenes en estado '${orderToCancel.status}'. El stock no fue debitado previamente.`;
             stockRestored = true; // No había nada que hacer, se considera éxito para proceder
         }
 
@@ -570,13 +589,17 @@ const deleteOrder = async (req, res) => {
         return res.status(200).json({
             status: "success",
             code: "ORDER_CANCELLED",
-            msg: "Orden cancelada con éxito y stock restaurado (si aplica).",
+            msg: `Orden cancelada con éxito.${needsStockRestore ? " Stock restaurado." : " No se requirió restauración de stock."}`,
             data: { // Devolver la orden cancelada
                 _id: orderToCancel._id,
                 status: orderToCancel.status,
                 lastUpdate: orderToCancel.lastUpdate
             },
-            info: { stockRestoreDetails }
+            info: { 
+                stockRestoreDetails,
+                stockWasRestored: needsStockRestore && stockRestored,
+                originalOrderStatus: orderToCancel.status
+            }
         });
 
     } catch (error) {
