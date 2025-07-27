@@ -1,5 +1,8 @@
 # PRIMA S.A. API
 
+## 🔗 Video de funcionalidad
+[Funcionalidad Backend PRIMA S.A.](https://www.youtube.com/watch?v=wnkshX29QgA&t=2s)
+
 ## 📋 Descripción
 API RESTful para la gestión de ventas, inventario y relaciones con clientes de PRIMA S.A.
 
