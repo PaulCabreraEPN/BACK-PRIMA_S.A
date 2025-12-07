@@ -1,6 +1,9 @@
 import { body, param } from 'express-validator';
 
 // Validaciones para el login de administrador
+// Regex que exige al menos una minúscula, una mayúscula y un número,
+// permite símbolos usados por el generador y tiene longitud mínima 8
+const regexPassword = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)[A-Za-z\d!@#$%&*().]{8,}$/;
 const regex= /^[A-Za-z0-9!@#$%&*().]{8,}$/
 const regexUsername = /^[A-Za-z0-9@#$%&*()_\-]+$/;
 export const validateAdminLogin = [
@@ -12,8 +15,8 @@ export const validateAdminLogin = [
     body('password')
         .trim()
         .notEmpty().withMessage('La contraseña es requerida')
-        .matches(/^[A-Z0-9]{8}$/)
-        .withMessage('Formato de contraseña inválido: la contraseña debe tener 8 caracteres y contener al menos una mayúscula, una minúscula y un número')
+        .matches(regexPassword)
+        .withMessage('Formato de contraseña inválido: la contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un número')
 ];
 
 
@@ -35,8 +38,8 @@ export const validateSellerLogin = [
 
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
-        .matches(regex)
-        .withMessage('Formato de contraseña inválido: la contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas, un número y un carácter especial')
+        .matches(regexPassword)
+        .withMessage('Formato de contraseña inválido: la contraseña debe tener al menos 8 caracteres, incluir mayúsculas, minúsculas y un número (se permiten símbolos)')
 ];
 
 // Validaciones para solicitud de recuperación de contraseña de vendedor
@@ -66,8 +69,8 @@ export const validateNewPassword = [
     body('password')
         .notEmpty().withMessage('La contraseña es requerida')
         .isLength({ min: 8 }).withMessage('La contraseña debe tener al menos 8 caracteres')
-        .matches(regex)
-        .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula, un número y un carácter especial'),
+        .matches(regexPassword)
+        .withMessage('La contraseña debe contener al menos una mayúscula, una minúscula y un número (se permiten símbolos)'),
     
     body('confirmpassword')
         .notEmpty().withMessage('La confirmación de contraseña es requerida')
