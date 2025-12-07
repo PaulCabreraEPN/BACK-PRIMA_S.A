@@ -5,7 +5,7 @@ import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
 import { generarJWT } from '../middlewares/JWT.js'
 
-//* Registrar un Vendedor
+//* Registrar un Vendedor (el correo se envia con sendgrid)
 const registerSeller = async (req, res) => {
     let emailStatus = { // Para guardar el resultado del envío de correo
         sent: false,
