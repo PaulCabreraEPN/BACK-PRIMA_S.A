@@ -1,6 +1,8 @@
 import { body, param } from 'express-validator'
 
-const patron = /^[A-Za-z0-9.\-/ ]+$/;
+// Permite letras Unicode (incluye acentos y ñ), dígitos, puntos, guiones, slash y espacios
+// Usamos la propiedad Unicode \p{L} y la bandera `u` para aceptar cualquier letra internacional
+const patron = /^[\p{L}0-9.\-\/ ]+$/u;
 
 export const createProductValidator = [
     body('id')
