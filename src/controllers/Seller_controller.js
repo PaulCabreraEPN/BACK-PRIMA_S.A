@@ -4,6 +4,7 @@ import { SendMailCredentials, sendMailToRecoveryPasswordSeller} from '../config/
 import usernameGenerator from '../helpers/usernameGenerator.js';
 import mongoose from 'mongoose';
 import { generarJWT } from '../middlewares/JWT.js'
+import path from 'path'
 
 //* Registrar un Vendedor (el correo se envia con sendgrid)
 const registerSeller = async (req, res) => {
@@ -132,22 +133,15 @@ const confirmEmail = async (req, res) => {
 
         //* Paso 2 - Validar Datos
         if (!token) {
-            return res.status(400).json({
-                status: "error",
-                code: "MISSING_FIELD",
-                msg: "Falta el token de confirmación."
-            });
+            // Servir página estática para token faltante
+                return res.status(400).sendFile(path.resolve(process.cwd(), 'src', 'public', 'confirm_missing.html'));
         }
 
         const SellerBDD = await Sellers.findOne({ token });
 
         if (!SellerBDD) {
-            // Podría ser que el token no exista o que ya se usó (SellerBDD.token es null)
-            return res.status(404).json({ // 404 Not Found o 400 Bad Request
-                status: "error",
-                code: "INVALID_OR_EXPIRED_TOKEN",
-                msg: "El token es inválido, ya ha sido utilizado o ha expirado."
-            });
+            // Servir página estática para token inválido/expirado
+            return res.status(404).sendFile(path.resolve(process.cwd(), 'src', 'public', 'confirm_invalid.html'));
         }
 
         //* Paso 3 Interactuar con BDD
@@ -156,20 +150,14 @@ const confirmEmail = async (req, res) => {
         SellerBDD.status = true; // Activar la cuenta al confirmar
         await SellerBDD.save();
 
-        return res.status(200).json({
-            status: "success",
-            code: "EMAIL_CONFIRMED",
-            msg: "Correo confirmado exitosamente. Ya puedes iniciar sesión."
-        });
+        // Enviar archivo HTML estático de éxito
+        const filePath = path.resolve(process.cwd(), 'src', 'public', 'confirm_success.html')
+        return res.status(200).sendFile(filePath)
 
     } catch (error) {
         console.error("Error en confirmEmail:", error); // Log interno
-        return res.status(500).json({
-            status: "error",
-            code: "SERVER_ERROR",
-            msg: "Ha ocurrido un error inesperado al confirmar el correo. Intente de nuevo más tarde.",
-            info: { detail: error.message }
-        });
+        const filePath = path.resolve(process.cwd(), 'src', 'public', 'confirm_error.html')
+        return res.status(500).sendFile(filePath)
     }
 }
 
