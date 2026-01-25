@@ -150,7 +150,7 @@ const recovery_pass_admin = async (req, res) => {
         return res.status(200).json({
             status: "success",
             code: "PASSWORD_RECOVERY_SUCCESS",
-            msg: `Nueva contraseña generada y enviada al correo de la empresa para el usuario '${username}'.`,
+            msg: `Nueva contraseña generada y enviada al correo de la empresa para el usuario '${username}'. Revisa la bandeja de spam si no la ves en la bandeja de entrada.`,
             info: { emailDetails: emailStatus }
         });
 
