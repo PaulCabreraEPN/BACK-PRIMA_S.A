@@ -142,7 +142,7 @@ const recovery_pass_admin = async (req, res) => {
                 status: "warning",
                 code: "EMAIL_WARNING",
                 msg: `Contraseña actualizada para '${username}', pero hubo un problema al enviar el correo de notificación a la empresa.`,
-                info: { emailDetails: emailStatus }
+                info: { emailSent: emailStatus.sent }
             });
         }
 
@@ -151,7 +151,7 @@ const recovery_pass_admin = async (req, res) => {
             status: "success",
             code: "PASSWORD_RECOVERY_SUCCESS",
             msg: `Nueva contraseña generada y enviada al correo de la empresa para el usuario '${username}'.`,
-            info: { emailDetails: emailStatus }
+            info: { emailSent: emailStatus.sent }
         });
 
     } catch (error) {
