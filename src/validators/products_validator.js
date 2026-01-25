@@ -1,8 +1,8 @@
 import { body, param } from 'express-validator'
 
-// Permite letras Unicode (incluye acentos y ñ), dígitos, puntos, guiones, slash y espacios
+// Permite letras Unicode (incluye acentos y ñ), dígitos y signos de puntuación comunes: . , ; : ! ? ( ) - / " ' % & + = @ # $ ¿ ¡ y espacios
 // Usamos la propiedad Unicode \p{L} y la bandera `u` para aceptar cualquier letra internacional
-const patron = /^[\p{L}0-9.\-\/ ]+$/u;
+const patron = /^[\p{L}0-9.\-\/(),;:!?"'%&+@#$¿¡= ]+$/u;
 
 export const createProductValidator = [
     body('id')
