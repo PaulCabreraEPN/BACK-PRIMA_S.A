@@ -109,7 +109,7 @@ const registerSeller = async (req, res) => {
             status: "success",
             code: "SELLER_REGISTERED",
             msg: "Vendedor registrado exitosamente.",
-            notification: `Se ha enviado un correo a ${email} para confirmar el registro y se ha generado un usuario y una contraseña temporal.`,
+            notification: `Se ha enviado un correo a ${email} para confirmar el registro y se ha generado un usuario y una contraseña temporal (revise su bandeja de entrada o la carpeta de correo no deseado (spam).`,
             data: sellerData,
             info: { emailDetails: emailStatus } // Incluir detalles del éxito del correo
         });
