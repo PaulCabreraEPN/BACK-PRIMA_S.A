@@ -59,7 +59,7 @@ export const validateUpdateClient = [
         }),
     body('Name')
         .optional()
-        .isLength({ min: 3,max:25 }).withMessage('El nombre debe tener al menos 3 caracteres y máximo 25'),
+        .isLength({ min: 3,max:50 }).withMessage('El nombre debe tener al menos 3 caracteres y máximo 50'),
     body('ComercialName')
         .optional()
         .isLength({ min: 3, max:50 }).withMessage('El nombre comercial debe tener al menos 3 caracteres y máximo 50'),
