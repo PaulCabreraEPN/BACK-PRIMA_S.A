@@ -386,7 +386,7 @@ const newPassword = async (req, res) => {
             return res.status(400).json({
                 status: "error",
                 code: "PASSWORD_MISMATCH",
-                msg: "Las contraseñas no coinciden."
+                msg: "Las contraseñas no coincide."
             });
         }
         // Aquí se podría añadir validación de fortaleza de contraseña
